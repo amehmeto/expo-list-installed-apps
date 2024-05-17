@@ -23,7 +23,7 @@ class ExpoListInstalledAppsModule : Module() {
 
     // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
     Function("hello") {
-      "Hello world! 👋"
+      "Wesh la famille ! 👋"
     }
 
     // Defines a JavaScript function that always returns a Promise and whose native code
