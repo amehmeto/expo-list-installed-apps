@@ -9,15 +9,16 @@ import {
 import {
   ChangeEventPayload,
   ExpoListInstalledAppsViewProps,
+  InstalledApp,
 } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
 // My own code attempt
 
-export function listInstalledApps(): { label: string; packageName: string }[] {
+export function listInstalledApps(): InstalledApp[] {
   const apps = ExpoListInstalledAppsModule.listInstalledApps()
   console.log(`apps in TS: `, apps)
-  return apps as { label: string; packageName: string }[]
+  return apps as InstalledApp[]
 }
 
 export async function setValueAsync(value: string) {

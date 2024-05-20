@@ -4,6 +4,13 @@ import android.content.Intent
 import android.content.pm.ResolveInfo
 import android.content.Context
 
+import android.os.Build
+import java.io.File
+/*
+import android.graphics.drawable.BitmapDrawable
+import java.io.ByteArrayOutputStream
+import android.graphics.Bitmap
+import android.util.Base64*/
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -23,26 +30,54 @@ class ExpoListInstalledAppsModule : Module() {
     Name("ExpoListInstalledApps")
 
     Function("listInstalledApps") {
-      try {
-        val context: Context = appContext.reactContext ?: throw IllegalStateException("Context is null")
+        try {
+            val context: Context = appContext.reactContext ?: throw IllegalStateException("Context is null")
 
-        val mainIntent = Intent(Intent.ACTION_MAIN, null)
-        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+            val pkgAppsList = context.packageManager?.getInstalledPackages(0)  ?: emptyList()
 
+            val appList = mutableListOf<Map<String, String>>()
 
-        val pkgAppsList: List<ResolveInfo> = context.packageManager?.queryIntentActivities(mainIntent, 0)  ?: emptyList()
+            for (packageInfo in pkgAppsList) {
+                val appInfo = packageInfo.applicationInfo
 
-        val appList = mutableListOf<Map<String, String>>()
+                val label = appInfo.loadLabel(context.getPackageManager()).toString()
+                val packageName = appInfo.packageName
+                val versionName = packageInfo.versionName
+                val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    packageInfo.longVersionCode.toInt()
+                } else {
+                    packageInfo.versionCode
+                }
+                val firstInstallTime = packageInfo.firstInstallTime
+                val lastUpdateTime = packageInfo.lastUpdateTime
+                val apkDir = appInfo.sourceDir
+                val size = File(apkDir).length()
+                val iconBase64 = ""
 
-        for (resolveInfo in pkgAppsList) {
-          val appInfo = resolveInfo.activityInfo.applicationInfo
-          val label = appInfo.loadLabel(context.getPackageManager()).toString()
-          val packageName = appInfo.packageName
-          appList.add(mapOf("label" to label, "packageName" to packageName))
-          Log.d("ListInstalledAppsModule", "Found app: $label with package: $packageName")
-        }
+                /*          // Get the app icon as a Base64 encoded image
+                          val icon = appInfo.loadIcon(context.packageManager)
+                          val bitmap = (icon as BitmapDrawable).bitmap
+                          val outputStream = ByteArrayOutputStream()
+                          bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                          val iconBase64 = Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
+          */
 
-        appList
+                appList.add(mapOf(
+                        "packageName" to packageName,
+                        "versionName" to versionName,
+                        "versionCode" to versionCode.toString(),
+                        "firstInstallTime" to firstInstallTime.toString(),
+                        "lastUpdateTime" to lastUpdateTime.toString(),
+                        "appName" to label,
+                        "icon" to iconBase64,
+                        "apkDir" to apkDir,
+                        "size" to size.toString()
+                ))
+
+                Log.d("ListInstalledAppsModule", "Found app: $label with package: $packageName")
+            }
+
+            appList
       } catch (e: Exception) {
         Log.e("ListInstalledAppsModule", "Error listing installed apps", e)
       }
