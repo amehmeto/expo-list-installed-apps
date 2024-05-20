@@ -28,11 +28,11 @@
   "author": "amehmeto <42amehmeto@gmail.com> (https://github.com/amehmeto)",
   "license": "MIT",
   "homepage": "https://github.com/amehmeto/expo-list-installed-apps#readme",
-  "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.0.25",
     "expo-module-scripts": "^3.5.1",
-    "expo-modules-core": "^1.12.9"
+    "expo-modules-core": "^1.12.9",
+    "prettier": "3.2.5"
   },
   "peerDependencies": {
     "expo": "*",

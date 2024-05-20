@@ -1,7 +1,7 @@
 export type ChangeEventPayload = {
-  value: string;
-};
+  value: string
+}
 
 export type ExpoListInstalledAppsViewProps = {
-  name: string;
-};
+  name: string
+}

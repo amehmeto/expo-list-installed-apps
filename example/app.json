@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "expo.modules.listinstalledapps.example"
+      "package": "expo.modules.listinstalledapps.example",
+      "permissions": ["android.permission.QUERY_ALL_PACKAGES"]
     },
     "web": {
       "favicon": "./assets/favicon.png"

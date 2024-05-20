@@ -1,26 +1,37 @@
-import { NativeModulesProxy, EventEmitter, Subscription } from 'expo-modules-core';
+import {
+  NativeModulesProxy,
+  EventEmitter,
+  Subscription,
+} from 'expo-modules-core'
 
 // Import the native module. On web, it will be resolved to ExpoListInstalledApps.web.ts
 // and on native platforms to ExpoListInstalledApps.ts
-import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule';
-import ExpoListInstalledAppsView from './ExpoListInstalledAppsView';
-import { ChangeEventPayload, ExpoListInstalledAppsViewProps } from './ExpoListInstalledApps.types';
+import {
+  ChangeEventPayload,
+  ExpoListInstalledAppsViewProps,
+} from './ExpoListInstalledApps.types'
+import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
-// Get the native constant value.
-export const PI = ExpoListInstalledAppsModule.PI;
+// My own code attempt
 
-export function hello(): string {
-  return ExpoListInstalledAppsModule.hello();
+export function listInstalledApps(): { label: string; packageName: string }[] {
+  const apps = ExpoListInstalledAppsModule.listInstalledApps()
+  console.log(`apps in TS: `, apps)
+  return apps as { label: string; packageName: string }[]
 }
 
 export async function setValueAsync(value: string) {
-  return await ExpoListInstalledAppsModule.setValueAsync(value);
+  return await ExpoListInstalledAppsModule.setValueAsync(value)
 }
 
-const emitter = new EventEmitter(ExpoListInstalledAppsModule ?? NativeModulesProxy.ExpoListInstalledApps);
+const emitter = new EventEmitter(
+  ExpoListInstalledAppsModule ?? NativeModulesProxy.ExpoListInstalledApps,
+)
 
-export function addChangeListener(listener: (event: ChangeEventPayload) => void): Subscription {
-  return emitter.addListener<ChangeEventPayload>('onChange', listener);
+export function addChangeListener(
+  listener: (event: ChangeEventPayload) => void,
+): Subscription {
+  return emitter.addListener<ChangeEventPayload>('onChange', listener)
 }
 
-export { ExpoListInstalledAppsView, ExpoListInstalledAppsViewProps, ChangeEventPayload };
+export { ExpoListInstalledAppsViewProps, ChangeEventPayload }

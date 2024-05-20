@@ -1,9 +1,18 @@
 package expo.modules.listinstalledapps
 
+import android.content.Intent
+import android.content.pm.ResolveInfo
+import android.content.Context
+
+
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
+import android.util.Log
+
 class ExpoListInstalledAppsModule : Module() {
+  private var context: Context? = null
+
   // Each module class must implement the definition function. The definition consists of components
   // that describes the module's functionality and behavior.
   // See https://docs.expo.dev/modules/module-api for more details about available components.
@@ -13,18 +22,34 @@ class ExpoListInstalledAppsModule : Module() {
     // The module will be accessible from `requireNativeModule('ExpoListInstalledApps')` in JavaScript.
     Name("ExpoListInstalledApps")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
+    Function("listInstalledApps") {
+      try {
+        val context: Context = appContext.reactContext ?: throw IllegalStateException("Context is null")
+
+        val mainIntent = Intent(Intent.ACTION_MAIN, null)
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+
+
+        val pkgAppsList: List<ResolveInfo> = context.packageManager?.queryIntentActivities(mainIntent, 0)  ?: emptyList()
+
+        val appList = mutableListOf<Map<String, String>>()
+
+        for (resolveInfo in pkgAppsList) {
+          val appInfo = resolveInfo.activityInfo.applicationInfo
+          val label = appInfo.loadLabel(context.getPackageManager()).toString()
+          val packageName = appInfo.packageName
+          appList.add(mapOf("label" to label, "packageName" to packageName))
+          Log.d("ListInstalledAppsModule", "Found app: $label with package: $packageName")
+        }
+
+        appList
+      } catch (e: Exception) {
+        Log.e("ListInstalledAppsModule", "Error listing installed apps", e)
+      }
+    }
 
     // Defines event names that the module can send to JavaScript.
     Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Wesh la famille ! 👋"
-    }
 
     // Defines a JavaScript function that always returns a Promise and whose native code
     // is by default dispatched on the different thread than the JavaScript runtime runs on.
@@ -33,15 +58,6 @@ class ExpoListInstalledAppsModule : Module() {
       sendEvent("onChange", mapOf(
         "value" to value
       ))
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ExpoListInstalledAppsView::class) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { view: ExpoListInstalledAppsView, prop: String ->
-        println(prop)
-      }
     }
   }
 }
