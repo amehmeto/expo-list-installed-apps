@@ -6,6 +6,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.app.Activity
 
+import expo.modules.core.ModuleRegistry
+import expo.modules.core.interfaces.ActivityProvider
+
+
+
 import android.content.pm.PackageInfo
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -36,8 +41,10 @@ class ExpoListInstalledAppsModule : Module() {
     private fun getContext(): Context {
         return  appContext.reactContext ?: throw IllegalStateException("Context is null")
     }
-    fun getBase64IconImage(context: Context, appInfo: ApplicationInfo): String {
+
+    fun getBase64IconImage(appInfo: ApplicationInfo): String {
         try {
+            val context: Context = getContext()
             val icon = appInfo.loadIcon(context.packageManager)
 
             val bitmap = when (icon) {
@@ -68,16 +75,27 @@ class ExpoListInstalledAppsModule : Module() {
         }
     }
 
+    private fun getVersionCode(packageInfo: PackageInfo): Long {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            packageInfo.versionCode.toLong()
+        }
+    }
+
     fun checkAndRequestPermission() {
         try {
-            val context: Context = appContext.reactContext ?: throw IllegalStateException("Context is null")
+            val context: Context = getContext()
 
             // Check if QUERY_ALL_PACKAGES permission is granted
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.QUERY_ALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
+                    val activityProvider = moduleRegistry.getModule(ActivityProvider::class.java)
+                    val currentActivity = activityProvider.currentActivity
+
                     // Request the permission
                     ActivityCompat.requestPermissions(
-                            context as Activity,
+                            currentActivity,
                             arrayOf(Manifest.permission.QUERY_ALL_PACKAGES),
                             PERMISSION_REQUEST_CODE
                     )
@@ -96,17 +114,13 @@ class ExpoListInstalledAppsModule : Module() {
         val label = appInfo.loadLabel(context.getPackageManager()).toString()
         val packageName = appInfo.packageName
         val versionName = packageInfo.versionName
-        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            packageInfo.longVersionCode.toInt()
-        } else {
-            packageInfo.versionCode
-        }
+        val versionCode = getVersionCode(packageInfo)
         val firstInstallTime = packageInfo.firstInstallTime
         val lastUpdateTime = packageInfo.lastUpdateTime
         val apkDir = appInfo.sourceDir
         val size = File(apkDir).length()
 
-        val iconBase64 = getBase64IconImage(context, appInfo)
+        val iconBase64 = getBase64IconImage(appInfo)
 
         val appInfoFormatted = mapOf(
                 "packageName" to packageName,
