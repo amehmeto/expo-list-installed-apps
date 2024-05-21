@@ -1,7 +1,7 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import { InstalledApp } from 'expo-list-installed-apps/ExpoListInstalledApps.types'
 import { useEffect, useState } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { FlatList, StyleSheet, Text, View, Image } from 'react-native'
 
 export default function App() {
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
@@ -19,7 +19,13 @@ export default function App() {
     index: number
   }) => (
     <View style={styles.appContainer}>
-      <Text style={styles.appName}>{`${index + 1}. ${item.appName}`}</Text>
+      <View style={{ display: 'flex', flexDirection: 'row' }}>
+        <Image
+          source={{ uri: item.icon }}
+          style={{ width: 30, height: 30, marginBottom: 10, marginRight: 10 }}
+        />
+        <Text style={styles.appName}>{`${index + 1}. ${item.appName}`}</Text>
+      </View>
       <Text
         style={styles.appDetail}
       >{`Package Name: ${item.packageName}`}</Text>
@@ -37,8 +43,6 @@ export default function App() {
       >{`Last Update Time: ${item.lastUpdateTime}`}</Text>
       <Text style={styles.appDetail}>{`APK Directory: ${item.apkDir}`}</Text>
       <Text style={styles.appDetail}>{`Size: ${item.size} bytes`}</Text>
-      {/* Uncomment the following line if you want to display the icon as well */}
-      {/* <Image source={{ uri: `data:image/png;base64,${item.icon}` }} style={{ width: 50, height: 50 }} /> */}
     </View>
   )
 
