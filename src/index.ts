@@ -17,7 +17,6 @@ import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
 export function listInstalledApps(): InstalledApp[] {
   const apps = ExpoListInstalledAppsModule.listInstalledApps()
-  console.log(`apps in TS: `, apps)
   return apps as InstalledApp[]
 }
 

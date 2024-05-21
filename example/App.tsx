@@ -1,7 +1,60 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import { InstalledApp } from 'expo-list-installed-apps/ExpoListInstalledApps.types'
 import { useEffect, useState } from 'react'
-import { FlatList, StyleSheet, Text, View, Image } from 'react-native'
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  Pressable,
+} from 'react-native'
+
+function AppCard(props: { item: InstalledApp; index: number }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  return (
+    <View style={styles.appContainer}>
+      <Pressable
+        style={{ display: 'flex', flexDirection: 'row' }}
+        onPress={() => setIsExpanded(!isExpanded)}
+      >
+        <Image
+          source={{ uri: props.item.icon }}
+          style={{ width: 28, height: 28, marginRight: 10 }}
+        />
+        <Text
+          style={styles.appName}
+        >{`${props.index + 1}. ${props.item.appName}`}</Text>
+      </Pressable>
+      {isExpanded && (
+        <View>
+          <Text
+            style={styles.appDetail}
+          >{`Package Name: ${props.item.packageName}`}</Text>
+          <Text
+            style={styles.appDetail}
+          >{`Version Name: ${props.item.versionName}`}</Text>
+          <Text
+            style={styles.appDetail}
+          >{`Version Code: ${props.item.versionCode}`}</Text>
+          <Text
+            style={styles.appDetail}
+          >{`First Install Time: ${props.item.firstInstallTime}`}</Text>
+          <Text
+            style={styles.appDetail}
+          >{`Last Update Time: ${props.item.lastUpdateTime}`}</Text>
+          <Text
+            style={styles.appDetail}
+          >{`APK Directory: ${props.item.apkDir}`}</Text>
+          <Text
+            style={styles.appDetail}
+          >{`Size: ${props.item.size} bytes`}</Text>
+        </View>
+      )}
+    </View>
+  )
+}
 
 export default function App() {
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
@@ -17,34 +70,9 @@ export default function App() {
   }: {
     item: InstalledApp
     index: number
-  }) => (
-    <View style={styles.appContainer}>
-      <View style={{ display: 'flex', flexDirection: 'row' }}>
-        <Image
-          source={{ uri: item.icon }}
-          style={{ width: 30, height: 30, marginBottom: 10, marginRight: 10 }}
-        />
-        <Text style={styles.appName}>{`${index + 1}. ${item.appName}`}</Text>
-      </View>
-      <Text
-        style={styles.appDetail}
-      >{`Package Name: ${item.packageName}`}</Text>
-      <Text
-        style={styles.appDetail}
-      >{`Version Name: ${item.versionName}`}</Text>
-      <Text
-        style={styles.appDetail}
-      >{`Version Code: ${item.versionCode}`}</Text>
-      <Text
-        style={styles.appDetail}
-      >{`First Install Time: ${item.firstInstallTime}`}</Text>
-      <Text
-        style={styles.appDetail}
-      >{`Last Update Time: ${item.lastUpdateTime}`}</Text>
-      <Text style={styles.appDetail}>{`APK Directory: ${item.apkDir}`}</Text>
-      <Text style={styles.appDetail}>{`Size: ${item.size} bytes`}</Text>
-    </View>
-  )
+  }) => {
+    return <AppCard item={item} index={index} />
+  }
 
   return (
     <View style={styles.container}>
