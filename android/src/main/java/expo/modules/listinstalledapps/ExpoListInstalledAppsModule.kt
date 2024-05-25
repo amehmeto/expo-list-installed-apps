@@ -134,6 +134,10 @@ class ExpoListInstalledAppsModule : Module() {
         return appInfoFormatted
     }
 
+    private fun isSystemPackage(packageInfo: PackageInfo): Boolean {
+        return packageInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM !== 0
+    }
+
     // Each module class must implement the definition function. The definition consists of components
     // that describes the module's functionality and behavior.
     // See https://docs.expo.dev/modules/module-api for more details about available components.
@@ -157,6 +161,9 @@ class ExpoListInstalledAppsModule : Module() {
                 val appList = mutableListOf<Map<String, String>>()
 
                 for (packageInfo in pkgAppsList) {
+                    if (isSystemPackage(packageInfo)) {
+                        continue
+                    }
                     val appInfoFormatted = formatAppInfo(packageInfo)
                     appList.add(appInfoFormatted)
                 }
