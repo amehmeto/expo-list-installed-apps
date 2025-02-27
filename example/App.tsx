@@ -59,10 +59,11 @@ function AppCard(props: { item: InstalledApp; index: number }) {
 export default function App() {
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
 
-  useEffect(() => {
-    const apps = ExpoListInstalledApps.listInstalledApps()
-    setInstalledApps(apps)
-  }, [])
+useEffect(() => {
+const apps = ExpoListInstalledApps.listInstalledApps()
+const sortedApps = apps.sort((a, b) => a.appName.localeCompare(b.appName))
+setInstalledApps(sortedApps)
+}, [])
 
   const renderItem = ({
     item,

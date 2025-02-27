@@ -6,8 +6,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.app.Activity
 
-import expo.modules.core.ModuleRegistry
-import expo.modules.core.interfaces.ActivityProvider
 
 
 
@@ -90,8 +88,8 @@ class ExpoListInstalledAppsModule : Module() {
             // Check if QUERY_ALL_PACKAGES permission is granted
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.QUERY_ALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
-                    val activityProvider = moduleRegistry.getModule(ActivityProvider::class.java)
-                    val currentActivity = activityProvider.currentActivity
+                    val currentActivity = appContext.currentActivity
+                        ?: throw IllegalStateException("Activity is null")
 
                     // Request the permission
                     ActivityCompat.requestPermissions(

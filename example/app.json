@@ -21,10 +21,17 @@
         "backgroundColor": "#ffffff"
       },
       "package": "expo.modules.listinstalledapps.example",
-      "permissions": ["android.permission.QUERY_ALL_PACKAGES"]
+      "permissions": [
+        "android.permission.QUERY_ALL_PACKAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f8f35b07-7e1e-46c6-b51e-d5d3abc7d5a7"
+      }
     }
   }
 }
