@@ -1,5 +1,5 @@
 {
-"name": "@amehmeto/expo-list-installed-apps",
+  "name": "xexpo-list-installed-apps",
   "version": "0.1.0",
   "description": "Allow to list installed apps on an Android device",
   "main": "build/index.js",
@@ -8,7 +8,9 @@
     "build": "expo-module build",
     "clean": "expo-module clean",
     "lint": "expo-module lint",
-    "test": "expo-module test",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
     "prepare": "expo-module prepare",
     "prepublishOnly": "expo-module prepublishOnly",
     "expo-module": "expo-module",
@@ -29,10 +31,15 @@
   "license": "MIT",
   "homepage": "https://github.com/amehmeto/expo-list-installed-apps#readme",
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@types/node": "^22.15.2",
     "@types/react": "^18.0.25",
+    "@vitest/coverage-istanbul": "^3.1.2",
+    "@vitest/ui": "^3.1.2",
     "expo-module-scripts": "^3.5.1",
     "expo-modules-core": "^1.12.9",
-    "prettier": "3.2.5"
+    "prettier": "3.2.5",
+    "vitest": "^3.1.2"
   },
   "peerDependencies": {
     "expo": "*",
