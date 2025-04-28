@@ -1,31 +1,24 @@
 package expo.modules.listinstalledapps
 
 import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import android.app.Activity
-
-
-
-
-import android.content.pm.PackageInfo
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.util.Base64
-import java.io.ByteArrayOutputStream
-import java.io.File
-
+import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-
-import android.util.Log
-
+import java.io.ByteArrayOutputStream
+import java.io.File
 
 
 class ExpoListInstalledAppsModule : Module() {
@@ -100,7 +93,7 @@ class ExpoListInstalledAppsModule : Module() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("TiedSiren", "Error checking and requesting permission", e)
+            Log.e("ExpoListInstalledApps", "Error checking and requesting permission", e)
         }
     }
 
@@ -144,7 +137,7 @@ class ExpoListInstalledAppsModule : Module() {
         // The module will be accessible from `requireNativeModule('ExpoListInstalledApps')` in JavaScript.
         Name("ExpoListInstalledApps")
 
-        Function("listInstalledApps") {
+        AsyncFunction("listInstalledApps") { type: String ->
             try {
                 val context: Context = getContext()
 
@@ -153,14 +146,24 @@ class ExpoListInstalledAppsModule : Module() {
                 // Check if QUERY_ALL_PACKAGES permission is granted
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     if (context.checkSelfPermission(Manifest.permission.QUERY_ALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
-                        Log.d("TiedSiren", "QUERY_ALL_PACKAGES permission not granted")
+                        Log.d("ExpoListInstalledApps", "QUERY_ALL_PACKAGES permission not granted")
                     }
                 }
 
                 // Log the current API level
-                Log.d("TiedSiren", "Current API level: ${Build.VERSION.SDK_INT}")
+                Log.d("ExpoListInstalledApps", "Current API level: ${Build.VERSION.SDK_INT}")
 
-                val pkgAppsList = context.packageManager?.getInstalledPackages(0) ?: emptyList()
+                var pkgAppsList = context.packageManager?.getInstalledPackages(0) ?: emptyList()
+
+                if (type.equals("system")) {
+                    pkgAppsList = pkgAppsList.filter { packageInfo ->
+                        (packageInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) == ApplicationInfo.FLAG_SYSTEM
+                    }
+                } else if (type.equals("user")) {
+                    pkgAppsList = pkgAppsList.filter { packageInfo ->
+                        (packageInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != ApplicationInfo.FLAG_SYSTEM
+                    }
+                }
 
                 val appList = mutableListOf<Map<String, String>>()
 
@@ -169,22 +172,10 @@ class ExpoListInstalledAppsModule : Module() {
                     appList.add(appInfoFormatted)
                 }
 
-                appList
+                return@AsyncFunction appList
             } catch (e: Exception) {
-                Log.e("TiedSiren", "Error listing installed apps", e)
+                Log.e("ExpoListInstalledApps", "Error listing installed apps", e)
             }
-        }
-
-        // Defines event names that the module can send to JavaScript.
-        Events("onChange")
-
-        // Defines a JavaScript function that always returns a Promise and whose native code
-        // is by default dispatched on the different thread than the JavaScript runtime runs on.
-        AsyncFunction("setValueAsync") { value: String ->
-            // Send an event to JavaScript.
-            sendEvent("onChange", mapOf(
-                    "value" to value
-            ))
         }
     }
 }

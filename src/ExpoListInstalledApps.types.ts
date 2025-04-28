@@ -17,3 +17,9 @@ export type InstalledApp = {
   apkDir: string
   size: number // Size in bytes
 }
+
+export enum AppType {
+  USER = 'user',
+  SYSTEM = 'system',
+  ALL = 'all',
+}
