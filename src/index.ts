@@ -8,11 +8,13 @@ import {
 } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
-export async function listInstalledApps(options?: {
-  type?: AppType
-}): Promise<InstalledApp[]> {
+export async function listInstalledApps(
+  options: {
+    type?: AppType
+  } = { type: AppType.ALL },
+): Promise<InstalledApp[]> {
   return ExpoListInstalledAppsModule.listInstalledApps(
-    options?.type ?? AppType.ALL,
+    options?.type,
   ) as Promise<InstalledApp[]>
 }
 

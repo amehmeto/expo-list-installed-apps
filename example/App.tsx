@@ -99,17 +99,17 @@ export default function App() {
     <View style={styles.container}>
       <View style={styles.filterButtons}>
         <Button
-          color={appType == AppType.ALL ? 'blue' : 'grey'}
+          color={appType === AppType.ALL ? 'blue' : 'grey'}
           onPress={() => setAppType(AppType.ALL)}
           title="All"
         />
         <Button
-          color={appType == AppType.USER ? 'blue' : 'grey'}
+          color={appType === AppType.USER ? 'blue' : 'grey'}
           onPress={() => setAppType(AppType.USER)}
           title="User"
         />
         <Button
-          color={appType == AppType.SYSTEM ? 'blue' : 'grey'}
+          color={appType === AppType.SYSTEM ? 'blue' : 'grey'}
           onPress={() => setAppType(AppType.SYSTEM)}
           title="System"
         />
