@@ -1,6 +1,6 @@
 {
 "name": "@amehmeto/expo-list-installed-apps",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Allow to list installed apps on an Android device",
   "main": "build/index.js",
   "types": "build/index.d.ts",

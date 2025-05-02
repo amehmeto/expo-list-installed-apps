@@ -2,7 +2,6 @@
 // and on native platforms to ExpoListInstalledApps.ts
 import {
   AppType,
-  ChangeEventPayload,
   ExpoListInstalledAppsViewProps,
   InstalledApp,
 } from './ExpoListInstalledApps.types'
@@ -18,4 +17,4 @@ export async function listInstalledApps(
   ) as Promise<InstalledApp[]>
 }
 
-export { ExpoListInstalledAppsViewProps, ChangeEventPayload }
+export { ExpoListInstalledAppsViewProps, AppType }
