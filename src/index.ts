@@ -8,7 +8,12 @@ export async function listInstalledApps(
     type?: AppType
   } = { type: AppType.ALL },
 ): Promise<InstalledApp[]> {
-  return ExpoListInstalledAppsModule.listInstalledApps(
-    options?.type,
-  ) as Promise<InstalledApp[]>
+  const apps = (await ExpoListInstalledAppsModule.listInstalledApps(
+    options?.type ?? AppType.ALL,
+  )) as Promise<InstalledApp[]>
+  // Check if the result is an array
+  if (!Array.isArray(apps)) {
+    return []
+  }
+  return apps || []
 }
