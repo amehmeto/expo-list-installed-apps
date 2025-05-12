@@ -1,10 +1,6 @@
 // Import the native module. On web, it will be resolved to ExpoListInstalledApps.web.ts
 // and on native platforms to ExpoListInstalledApps.ts
-import {
-  AppType,
-  ExpoListInstalledAppsViewProps,
-  InstalledApp,
-} from './ExpoListInstalledApps.types'
+import { AppType, InstalledApp } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
 export async function listInstalledApps(
@@ -16,5 +12,3 @@ export async function listInstalledApps(
     options?.type,
   ) as Promise<InstalledApp[]>
 }
-
-export { ExpoListInstalledAppsViewProps, AppType }

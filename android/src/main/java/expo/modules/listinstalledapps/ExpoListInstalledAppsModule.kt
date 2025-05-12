@@ -3,9 +3,11 @@ package expo.modules.listinstalledapps
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.AdaptiveIconDrawable
@@ -153,21 +155,36 @@ class ExpoListInstalledAppsModule : Module() {
                 // Log the current API level
                 Log.d("ExpoListInstalledApps", "Current API level: ${Build.VERSION.SDK_INT}")
 
-                var pkgAppsList = context.packageManager?.getInstalledPackages(0) ?: emptyList()
+                val intent = Intent(Intent.ACTION_MAIN, null)
+                intent.addCategory(Intent.CATEGORY_LAUNCHER)
+                var pkgAppsList: List<ResolveInfo>
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pkgAppsList = context.packageManager.queryIntentActivities(
+                        Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
+                        PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+                    )
+                } else {
+                    pkgAppsList = context.packageManager.queryIntentActivities(
+                        Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
+                        PackageManager.GET_META_DATA
+                    )
+                }
 
                 if (type.equals("system")) {
                     pkgAppsList = pkgAppsList.filter { packageInfo ->
-                        (packageInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) == ApplicationInfo.FLAG_SYSTEM
+                        (packageInfo.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) == ApplicationInfo.FLAG_SYSTEM
                     }
                 } else if (type.equals("user")) {
                     pkgAppsList = pkgAppsList.filter { packageInfo ->
-                        (packageInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != ApplicationInfo.FLAG_SYSTEM
+                        (packageInfo.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != ApplicationInfo.FLAG_SYSTEM
                     }
                 }
 
                 val appList = mutableListOf<Map<String, String>>()
 
-                for (packageInfo in pkgAppsList) {
+                for (resourceInfo in pkgAppsList) {
+                    val packageInfo = context.packageManager.getPackageInfo(resourceInfo.activityInfo.packageName, PackageManager.GET_META_DATA)
                     val appInfoFormatted = formatAppInfo(packageInfo)
                     appList.add(appInfoFormatted)
                 }

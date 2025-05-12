@@ -1,7 +1,3 @@
-export type ExpoListInstalledAppsViewProps = {
-  name: string
-}
-
 export type InstalledApp = {
   packageName: string
   versionName: string
