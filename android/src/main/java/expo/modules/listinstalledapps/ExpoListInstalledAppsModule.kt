@@ -102,15 +102,15 @@ class ExpoListInstalledAppsModule : Module() {
     fun formatAppInfo(packageInfo: PackageInfo): Map<String, String> {
         val context: Context = getContext()
 
-        val appInfo = packageInfo.applicationInfo
+        val appInfo = packageInfo.applicationInfo ?: throw IllegalStateException("ApplicationInfo is null")
         val label = appInfo.loadLabel(context.getPackageManager()).toString()
         val packageName = appInfo.packageName
-        val versionName = packageInfo.versionName
+        val versionName = packageInfo.versionName ?: "Unknown"
         val versionCode = getVersionCode(packageInfo)
         val firstInstallTime = packageInfo.firstInstallTime
         val lastUpdateTime = packageInfo.lastUpdateTime
-        val apkDir = appInfo.sourceDir
-        val size = File(apkDir).length()
+        val apkDir = appInfo.sourceDir ?: "Unknown"
+        val size = if (apkDir != "Unknown") File(apkDir).length() else 0L
 
         val iconBase64 = getBase64IconImage(appInfo)
 
