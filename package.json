@@ -29,11 +29,14 @@
   "license": "MIT",
   "homepage": "https://github.com/amehmeto/expo-list-installed-apps#readme",
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@types/react": "^18.0.25",
     "expo-module-scripts": "^3.5.1",
     "expo-modules-core": "^1.12.9",
     "husky": "^9.1.7",
-    "prettier": "3.2.5"
+    "prettier": "3.2.5",
+    "semantic-release": "^25.0.2"
   },
   "peerDependencies": {
     "expo": "*",
