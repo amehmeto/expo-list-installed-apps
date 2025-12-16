@@ -8,12 +8,24 @@
     "build": "expo-module build",
     "clean": "expo-module clean",
     "lint": "expo-module lint",
+    "lint:fix": "expo-module lint --fix",
     "test": "expo-module test",
     "prepare": "expo-module prepare && husky",
     "prepublishOnly": "expo-module prepublishOnly",
     "expo-module": "expo-module",
     "open:ios": "xed example/ios",
     "open:android": "open -a \"Android Studio\" example/android"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "npm run lint:fix --"
+    ],
+    "android/**/*.kt": [
+      "ktlint --format"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "keywords": [
     "react-native",
@@ -35,7 +47,8 @@
     "expo-module-scripts": "^3.5.1",
     "expo-modules-core": "^1.12.9",
     "husky": "^9.1.7",
-    "prettier": "3.2.5",
+    "lint-staged": "^16.0.0",
+    "prettier": "^3.2.5",
     "semantic-release": "^25.0.2"
   },
   "peerDependencies": {
