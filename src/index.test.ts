@@ -1,6 +1,6 @@
-import { listInstalledApps } from './index'
-import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 import { AppType } from './ExpoListInstalledApps.types'
+import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
+import { listInstalledApps } from './index'
 
 // Mock the native module
 jest.mock('./ExpoListInstalledAppsModule', () => ({
