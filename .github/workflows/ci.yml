@@ -4,7 +4,6 @@ on:
   push:
     branches: [master, develop]
   pull_request:
-    types: [opened, synchronize, reopened, closed]
 
 permissions:
   contents: write
@@ -12,7 +11,6 @@ permissions:
 jobs:
   typescript:
     name: TypeScript & Lint
-    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +40,6 @@ jobs:
 
   android:
     name: Android Build
-    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
 
     steps:
@@ -106,7 +103,6 @@ jobs:
           retention-days: 30
 
       - name: Create PR release
-        id: create_release
         if: github.event_name == 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
@@ -123,49 +119,3 @@ jobs:
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Send Slack notification
-        if: github.event_name == 'pull_request' && success()
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          BRANCH: ${{ github.head_ref }}
-          COMMIT_SHA: ${{ github.sha }}
-          TAG_NAME: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
-          DOWNLOAD_URL: ${{ github.server_url }}/${{ github.repository }}/releases/download/pr-${{ github.event.pull_request.number }}-${{ github.sha }}/expo-list-installed-apps.apk
-        run: bash scripts/send-slack-notification.sh
-
-  cleanup-pr-releases:
-    name: Cleanup PR Releases
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Cleanup PR build releases
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          echo "Cleaning up releases for PR #${PR_NUMBER}"
-
-          # List all releases matching the PR pattern
-          RELEASES=$(gh release list --limit 1000 | grep "pr-${PR_NUMBER}-" | awk '{print $1}' || true)
-
-          if [ -z "$RELEASES" ]; then
-            echo "No releases found for PR #${PR_NUMBER}"
-            exit 0
-          fi
-
-          # Delete each release
-          echo "$RELEASES" | while read -r TAG; do
-            if [ -n "$TAG" ]; then
-              echo "Deleting release: $TAG"
-              gh release delete "$TAG" --yes --cleanup-tag || true
-            fi
-          done
-
-          echo "Cleanup complete for PR #${PR_NUMBER}"
