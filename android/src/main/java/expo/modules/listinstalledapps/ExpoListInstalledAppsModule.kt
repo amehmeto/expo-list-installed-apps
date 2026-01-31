@@ -161,12 +161,12 @@ class ExpoListInstalledAppsModule : Module() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     pkgAppsList = context.packageManager.queryIntentActivities(
                         Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
-                        PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+                        PackageManager.ResolveInfoFlags.of(0L)
                     )
                 } else {
                     pkgAppsList = context.packageManager.queryIntentActivities(
                         Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
-                        PackageManager.GET_META_DATA
+                        0
                     )
                 }
 
