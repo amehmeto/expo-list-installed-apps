@@ -132,6 +132,8 @@ function AppContent() {
             keyExtractor={(item) => item.packageName}
             style={styles.list}
             contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) + 20 }}
+            overScrollMode="never"
+            bounces={false}
           />
         </>
       )}
