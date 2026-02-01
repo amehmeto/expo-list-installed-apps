@@ -1,4 +1,4 @@
-import { AppType } from './ExpoListInstalledApps.types'
+import { AppType, UniqueBy } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 import { listInstalledApps } from './index'
 
@@ -19,6 +19,7 @@ describe('listInstalledApps', () => {
       icon: 'base64encodedicon',
       apkDir: '/path/to/apk',
       size: 12345678,
+      activityName: 'com.example.MainActivity',
     },
     {
       packageName: 'package.name2',
@@ -30,6 +31,7 @@ describe('listInstalledApps', () => {
       icon: 'base64encodedicon2',
       apkDir: '/path/to/apk2',
       size: 23456789,
+      activityName: 'com.example2.MainActivity',
     },
   ]
 
@@ -38,13 +40,14 @@ describe('listInstalledApps', () => {
     ExpoListInstalledAppsModule.listInstalledApps.mockClear()
   })
 
-  it('should call ExpoListInstalledAppsModule.listInstalledApps with default AppType.ALL', async () => {
+  it('should call ExpoListInstalledAppsModule.listInstalledApps with default AppType.ALL and UniqueBy.PACKAGE', async () => {
     ExpoListInstalledAppsModule.listInstalledApps.mockResolvedValue(mockApps)
 
     const result = await listInstalledApps()
 
     expect(ExpoListInstalledAppsModule.listInstalledApps).toHaveBeenCalledWith(
       AppType.ALL,
+      UniqueBy.PACKAGE,
     )
     expect(result).toEqual(mockApps)
   })
@@ -58,17 +61,31 @@ describe('listInstalledApps', () => {
 
     expect(ExpoListInstalledAppsModule.listInstalledApps).toHaveBeenCalledWith(
       AppType.USER,
+      UniqueBy.PACKAGE,
     )
     expect(result).toEqual(mockApps.filter((app) => app.appName === 'User App'))
   })
 
-  it('should handle empty options by defaulting to AppType.ALL', async () => {
+  it('should handle empty options by defaulting to AppType.ALL and UniqueBy.PACKAGE', async () => {
     ExpoListInstalledAppsModule.listInstalledApps.mockResolvedValue(mockApps)
 
     const result = await listInstalledApps({})
 
     expect(ExpoListInstalledAppsModule.listInstalledApps).toHaveBeenCalledWith(
       AppType.ALL,
+      UniqueBy.PACKAGE,
+    )
+    expect(result).toEqual(mockApps)
+  })
+
+  it('should call ExpoListInstalledAppsModule.listInstalledApps with UniqueBy.NONE when specified', async () => {
+    ExpoListInstalledAppsModule.listInstalledApps.mockResolvedValue(mockApps)
+
+    const result = await listInstalledApps({ uniqueBy: UniqueBy.NONE })
+
+    expect(ExpoListInstalledAppsModule.listInstalledApps).toHaveBeenCalledWith(
+      AppType.ALL,
+      UniqueBy.NONE,
     )
     expect(result).toEqual(mockApps)
   })
@@ -89,6 +106,7 @@ describe('listInstalledApps', () => {
       expect(result[0]).toHaveProperty('firstInstallTime')
       expect(result[0]).toHaveProperty('lastUpdateTime')
       expect(result[0]).toHaveProperty('apkDir')
+      expect(result[0]).toHaveProperty('activityName')
     }
   })
 

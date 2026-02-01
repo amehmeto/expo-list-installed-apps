@@ -1,0 +1,29 @@
+build:
+  maxIssues: 0
+
+style:
+  MaxLineLength:
+    active: false
+  WildcardImport:
+    active: false
+  UnusedPrivateMember:
+    active: true
+    allowedNames: "(_|ignored|expected|serialVersionUID)"
+  MagicNumber:
+    active: false
+  NewLineAtEndOfFile:
+    active: true
+  UseRequire:
+    active: false
+  UseCheckOrError:
+    active: false
+
+naming:
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][A-Za-z0-9]*'
+    privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
