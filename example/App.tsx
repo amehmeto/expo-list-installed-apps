@@ -131,7 +131,7 @@ function AppContent() {
             renderItem={renderItem}
             keyExtractor={(item) => item.packageName}
             style={styles.list}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) + 20 }}
           />
         </>
       )}
