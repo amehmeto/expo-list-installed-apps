@@ -17,17 +17,26 @@ import {
   listInstalledApps,
   AppType,
   InstalledApp,
+  UniqueBy,
 } from 'expo-list-installed-apps'
 
 async function getApps() {
+  // Default: one entry per package (deduplicated)
   const apps: InstalledApp[] = await listInstalledApps({ type: AppType.ALL })
   console.log(apps)
+
+  // Get all launcher activities (may include multiple entries per package)
+  const allActivities: InstalledApp[] = await listInstalledApps({
+    type: AppType.ALL,
+    uniqueBy: UniqueBy.NONE,
+  })
+  console.log(allActivities)
 }
 ```
 
 ## API
 
-### listInstalledApps(options?: { type?: AppType }): Promise<InstalledApp[]>
+### listInstalledApps(options?): Promise<InstalledApp[]>
 
 Lists installed applications on the device.
 
@@ -37,6 +46,9 @@ Lists installed applications on the device.
   - `AppType.ALL` (default): List all apps
   - `AppType.SYSTEM`: List only system apps
   - `AppType.USER`: List only user-installed apps
+- `options.uniqueBy` (optional):
+  - `UniqueBy.PACKAGE` (default): Return one entry per package name (recommended for most use cases)
+  - `UniqueBy.NONE`: Return all launcher activities (some apps may appear multiple times if they have multiple launcher activities)
 
 #### Returns
 
@@ -50,9 +62,27 @@ Lists installed applications on the device.
 - `SYSTEM`
 - `USER`
 
+#### UniqueBy
+
+- `PACKAGE` - Deduplicate by package name (default)
+- `NONE` - Return all launcher activities
+
 #### InstalledApp
 
-An object representing an installed application. See `ExpoListInstalledApps.types.ts` for the full type definition.
+```typescript
+type InstalledApp = {
+  packageName: string
+  versionName: string
+  versionCode: number
+  firstInstallTime: number
+  lastUpdateTime: number
+  appName: string
+  icon: string // Base64 encoded image
+  apkDir: string
+  size: number // Size in bytes
+  activityName: string // The launcher activity class name
+}
+```
 
 ## Notes
 

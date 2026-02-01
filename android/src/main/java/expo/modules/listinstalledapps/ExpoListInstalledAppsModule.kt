@@ -99,7 +99,7 @@ class ExpoListInstalledAppsModule : Module() {
     }
 
 
-    fun formatAppInfo(packageInfo: PackageInfo): Map<String, String> {
+    fun formatAppInfo(packageInfo: PackageInfo, activityName: String): Map<String, String> {
         val context: Context = getContext()
 
         val appInfo = packageInfo.applicationInfo ?: throw IllegalStateException("ApplicationInfo is null")
@@ -123,7 +123,8 @@ class ExpoListInstalledAppsModule : Module() {
                 "appName" to label,
                 "icon" to iconBase64,
                 "apkDir" to apkDir,
-                "size" to size.toString()
+                "size" to size.toString(),
+                "activityName" to activityName
         )
 
         return appInfoFormatted
@@ -138,7 +139,7 @@ class ExpoListInstalledAppsModule : Module() {
         // The module will be accessible from `requireNativeModule('ExpoListInstalledApps')` in JavaScript.
         Name("ExpoListInstalledApps")
 
-        AsyncFunction("listInstalledApps") { type: String ->
+        AsyncFunction("listInstalledApps") { type: String, uniqueBy: String ->
             try {
                 val context: Context = getContext()
 
@@ -181,10 +182,20 @@ class ExpoListInstalledAppsModule : Module() {
                 }
 
                 val appList = mutableListOf<Map<String, String>>()
+                val seenPackages = mutableSetOf<String>()
 
-                for (resourceInfo in pkgAppsList) {
-                    val packageInfo = context.packageManager.getPackageInfo(resourceInfo.activityInfo.packageName, PackageManager.GET_META_DATA)
-                    val appInfoFormatted = formatAppInfo(packageInfo)
+                for (resolveInfo in pkgAppsList) {
+                    val packageName = resolveInfo.activityInfo.packageName
+                    val activityName = resolveInfo.activityInfo.name
+
+                    // Deduplicate by package name if uniqueBy is "package"
+                    if (uniqueBy == "package" && seenPackages.contains(packageName)) {
+                        continue
+                    }
+                    seenPackages.add(packageName)
+
+                    val packageInfo = context.packageManager.getPackageInfo(packageName, PackageManager.GET_META_DATA)
+                    val appInfoFormatted = formatAppInfo(packageInfo, activityName)
                     appList.add(appInfoFormatted)
                 }
 
