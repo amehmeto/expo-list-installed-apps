@@ -1,5 +1,8 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
-import { InstalledApp } from 'expo-list-installed-apps/ExpoListInstalledApps.types'
+import {
+  AppType,
+  InstalledApp,
+} from 'expo-list-installed-apps/ExpoListInstalledApps.types'
 import { useEffect, useState } from 'react'
 import {
   FlatList,
@@ -8,6 +11,8 @@ import {
   View,
   Image,
   Pressable,
+  Button,
+  ActivityIndicator,
 } from 'react-native'
 
 function AppCard(props: { item: InstalledApp; index: number }) {
@@ -57,13 +62,28 @@ function AppCard(props: { item: InstalledApp; index: number }) {
 }
 
 export default function App() {
+  const [appType, setAppType] = useState(AppType.ALL)
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
+  const [isLoading, setLoading] = useState(true)
 
   useEffect(() => {
-    const apps = ExpoListInstalledApps.listInstalledApps()
-    const sortedApps = apps.sort((a, b) => a.appName.localeCompare(b.appName))
-    setInstalledApps(sortedApps)
-  }, [])
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const apps = await ExpoListInstalledApps.listInstalledApps({
+          type: appType,
+        })
+        const sortedApps = apps.sort((a, b) =>
+          a.appName.localeCompare(b.appName),
+        )
+        setInstalledApps(sortedApps)
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [appType])
 
   const renderItem = ({
     item,
@@ -77,15 +97,38 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>
-        Installed apps ({installedApps.length}):
-      </Text>
-      <FlatList
-        data={installedApps}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.packageName}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      />
+      <View style={styles.filterButtons}>
+        <Button
+          color={appType === AppType.ALL ? 'blue' : 'grey'}
+          onPress={() => setAppType(AppType.ALL)}
+          title="All"
+        />
+        <Button
+          color={appType === AppType.USER ? 'blue' : 'grey'}
+          onPress={() => setAppType(AppType.USER)}
+          title="User"
+        />
+        <Button
+          color={appType === AppType.SYSTEM ? 'blue' : 'grey'}
+          onPress={() => setAppType(AppType.SYSTEM)}
+          title="System"
+        />
+      </View>
+      {isLoading ? (
+        <ActivityIndicator size="large" color="blue" />
+      ) : (
+        <>
+          <Text style={styles.header}>
+            Installed apps ({installedApps.length}):
+          </Text>
+          <FlatList
+            data={installedApps}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.packageName}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          />
+        </>
+      )}
     </View>
   )
 }
@@ -113,5 +156,9 @@ const styles = StyleSheet.create({
   },
   appDetail: {
     fontSize: 14,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
 })

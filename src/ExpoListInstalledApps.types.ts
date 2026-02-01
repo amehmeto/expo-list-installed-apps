@@ -1,11 +1,3 @@
-export type ChangeEventPayload = {
-  value: string
-}
-
-export type ExpoListInstalledAppsViewProps = {
-  name: string
-}
-
 export type InstalledApp = {
   packageName: string
   versionName: string
@@ -16,4 +8,10 @@ export type InstalledApp = {
   icon: string // Base64 encoded image
   apkDir: string
   size: number // Size in bytes
+}
+
+export enum AppType {
+  USER = 'user',
+  SYSTEM = 'system',
+  ALL = 'all',
 }

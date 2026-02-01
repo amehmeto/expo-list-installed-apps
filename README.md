@@ -1,32 +1,64 @@
 # expo-list-installed-apps
 
-Allow to list installed apps on an Android device
+A React Native module to list installed applications on the device. Supports only Android platform.
 
-# API documentation
+## Installation
 
-- [Documentation for the main branch](https://github.com/expo/expo/blob/main/docs/pages/versions/unversioned/sdk/list-installed-apps.md)
-- [Documentation for the latest stable release](https://docs.expo.dev/versions/latest/sdk/list-installed-apps/)
-
-# Installation in managed Expo projects
-
-For [managed](https://docs.expo.dev/archive/managed-vs-bare/) Expo projects, please follow the installation instructions in the [API documentation for the latest stable release](#api-documentation). If you follow the link and there is no documentation available then this library is not yet usable within managed projects &mdash; it is likely to be included in an upcoming Expo SDK release.
-
-# Installation in bare React Native projects
-
-For bare React Native projects, you must ensure that you have [installed and configured the `expo` package](https://docs.expo.dev/bare/installing-expo-modules/) before continuing.
-
-### Add the package to your npm dependencies
-
-```
+```sh
 npm install expo-list-installed-apps
+# or
+yarn add expo-list-installed-apps
 ```
 
+## Usage
 
+```typescript
+import {
+  listInstalledApps,
+  AppType,
+  InstalledApp,
+} from 'expo-list-installed-apps'
 
-### Configure for Android
+async function getApps() {
+  const apps: InstalledApp[] = await listInstalledApps({ type: AppType.ALL })
+  console.log(apps)
+}
+```
 
+## API
 
+### listInstalledApps(options?: { type?: AppType }): Promise<InstalledApp[]>
+
+Lists installed applications on the device.
+
+#### Parameters
+
+- `options.type` (optional):
+  - `AppType.ALL` (default): List all apps
+  - `AppType.SYSTEM`: List only system apps
+  - `AppType.USER`: List only user-installed apps
+
+#### Returns
+
+- `Promise<InstalledApp[]>`: An array of installed app objects.
+
+### Types
+
+#### AppType
+
+- `ALL`
+- `SYSTEM`
+- `USER`
+
+#### InstalledApp
+
+An object representing an installed application. See `ExpoListInstalledApps.types.ts` for the full type definition.
+
+## Notes
+
+- This module uses native code and will not work on web platforms.
+- For more details, see the source files in the `src/` directory.
 
 # Contributing
 
-Contributions are very welcome! Please refer to guidelines described in the [contributing guide]( https://github.com/expo/expo#contributing).
+Contributions are very welcome! Please refer to guidelines described in the [contributing guide](https://github.com/expo/expo#contributing).
