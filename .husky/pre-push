@@ -1,1 +1,19 @@
+# Block direct push to main/master
 sh .husky/scripts/no-direct-push-main-master.sh
+
+# Check for conflicts with master before pushing
+sh .husky/scripts/check-conflicts-with-master.sh
+
+# Run TypeScript unit tests
+npm test
+
+# Run Kotlin unit tests
+if [ -d "example/android" ] && [ -f "example/android/gradlew" ]; then
+  echo "Running Kotlin unit tests..."
+  # Extract module name from package.json (format: @scope/name -> scope-name or just name)
+  MODULE_NAME=$(node -p "require('./package.json').name.replace('@', '').replace('/', '-')")
+  cd example/android && ./gradlew ":${MODULE_NAME}:testDebugUnitTest" || exit 1
+  cd ../..
+else
+  echo "Android project not found, skipping Kotlin tests"
+fi

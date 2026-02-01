@@ -28,13 +28,26 @@
   "author": "amehmeto <42amehmeto@gmail.com> (https://github.com/amehmeto)",
   "license": "MIT",
   "homepage": "https://github.com/amehmeto/expo-list-installed-apps#readme",
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "npm run lint -- --fix"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ],
+    ".husky/scripts/*.sh": [
+      "shellcheck"
+    ]
+  },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/react": "^18.0.25",
     "expo-module-scripts": "^3.5.1",
     "expo-modules-core": "^1.12.9",
+    "get-east-asian-width": "^1.4.0",
     "husky": "^9.1.7",
+    "lint-staged": "^16.0.0",
     "prettier": "3.2.5",
     "semantic-release": "^25.0.2"
   },
