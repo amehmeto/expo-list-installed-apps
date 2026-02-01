@@ -84,6 +84,7 @@ export default function App() {
         data={installedApps}
         renderItem={renderItem}
         keyExtractor={(item) => item.packageName}
+        contentContainerStyle={{ paddingBottom: 40 }}
       />
     </View>
   )
