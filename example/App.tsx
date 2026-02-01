@@ -14,6 +14,10 @@ import {
   Button,
   ActivityIndicator,
 } from 'react-native'
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context'
 
 function AppCard(props: { item: InstalledApp; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -61,7 +65,8 @@ function AppCard(props: { item: InstalledApp; index: number }) {
   )
 }
 
-export default function App() {
+function AppContent() {
+  const insets = useSafeAreaInsets()
   const [appType, setAppType] = useState(AppType.ALL)
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
   const [isLoading, setLoading] = useState(true)
@@ -96,7 +101,7 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.filterButtons}>
         <Button
           color={appType === AppType.ALL ? 'blue' : 'grey'}
@@ -125,7 +130,8 @@ export default function App() {
             data={installedApps}
             renderItem={renderItem}
             keyExtractor={(item) => item.packageName}
-            contentContainerStyle={{ paddingBottom: 40 }}
+            style={styles.list}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
           />
         </>
       )}
@@ -133,11 +139,22 @@ export default function App() {
   )
 }
 
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  )
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
     backgroundColor: '#fff',
+  },
+  list: {
+    flex: 1,
   },
   header: {
     fontSize: 20,
