@@ -1,3 +1,8 @@
+# Skip pre-push hooks in CI (checks already run in CI workflow before semantic-release)
+if [ "$CI" = "true" ]; then
+  exit 0
+fi
+
 # Block direct push to main/master
 sh .husky/scripts/no-direct-push-main-master.sh
 
