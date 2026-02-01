@@ -1,4 +1,7 @@
-apply plugin: 'com.android.library'
+plugins {
+  id 'com.android.library'
+  id 'io.gitlab.arturbosch.detekt' version '1.23.4'
+}
 
 group = 'expo.modules.listinstalledapps'
 version = '0.1.0'
@@ -45,4 +48,10 @@ android {
 dependencies {
   testImplementation 'junit:junit:4.13.2'
   testImplementation 'org.mockito:mockito-core:5.4.0'
+}
+
+detekt {
+  buildUponDefaultConfig = true
+  config.setFrom(files("$projectDir/detekt.yml"))
+  source.setFrom(files("src/main/java", "src/test/java"))
 }
