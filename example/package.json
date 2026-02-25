@@ -12,7 +12,6 @@
     "expo": "~55.0.0",
     "react": "^19.0.0",
     "react-native": "^0.84.0",
-    "expo-dev-client": "~5.0.0",
     "react-native-safe-area-context": "^5.4.0"
   },
   "devDependencies": {
