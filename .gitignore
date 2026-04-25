@@ -55,3 +55,6 @@ yarn-error.log
 
 # Expo
 .expo/*
+
+# Local Claude planning notes (not part of the repo)
+docs/
