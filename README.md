@@ -1,6 +1,6 @@
 # expo-list-installed-apps
 
-A React Native module to list installed applications on the device. Supports only Android platform.
+A React Native module to list installed applications on the device. Android has full support; iOS support is in active development — see [Platform Support](#platform-support) below.
 
 ## Installation
 
@@ -33,6 +33,23 @@ async function getApps() {
   console.log(allActivities)
 }
 ```
+
+## Platform Support
+
+| Feature                                   | Android | iOS                                             |
+| ----------------------------------------- | ------- | ----------------------------------------------- |
+| List all installed apps                   | Full    | Not possible (Apple privacy) — returns `[]`     |
+| Detect specific app by URL scheme         | M2      | M2                                              |
+| User-driven app selection (system picker) | N/A     | M3 (requires Apple Family Controls entitlement) |
+| App metadata (name, icon, version)        | Full    | M4 (extension-only, limited resolution)         |
+
+iOS cannot enumerate every installed app — Apple has no public API for that, by design. iOS support therefore takes a different shape than Android:
+
+- **M2** — `canOpenApp(scheme)` to check if a known app is installed via URL scheme (Android via `PackageManager`, iOS via `UIApplication.canOpenURL`).
+- **M3** — `FamilyActivityPicker` view component for user-driven selection plus app shielding via `ManagedSettings`.
+- **M4** — Extension-based name/icon resolution and scheduled blocking.
+
+Today (M1), `listInstalledApps()` is wired up on iOS and returns `[]` so cross-platform consumers can import the module without crashing. See `docs/ios-implementation-plan.md` for the full milestone breakdown.
 
 ## API
 
@@ -86,7 +103,8 @@ type InstalledApp = {
 
 ## Notes
 
-- This module uses native code and will not work on web platforms.
+- This module uses native code and does not support web.
+- On iOS, `listInstalledApps()` currently returns `[]` — see [Platform Support](#platform-support).
 - For more details, see the source files in the `src/` directory.
 
 # Contributing
