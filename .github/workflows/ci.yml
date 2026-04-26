@@ -178,5 +178,5 @@ jobs:
             -workspace expolistinstalledappsexample.xcworkspace \
             -scheme expolistinstalledappsexample \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,OS=latest,name=iPhone 15' \
+            -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
