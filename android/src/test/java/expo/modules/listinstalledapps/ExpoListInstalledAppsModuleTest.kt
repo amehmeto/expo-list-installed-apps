@@ -56,4 +56,35 @@ class ExpoListInstalledAppsModuleTest {
     fun testDefinition_isDefined() {
         assertNotNull(module.definition())
     }
+
+    @Test
+    fun testCanOpenScheme_emptyReturnsFalse() {
+        assertFalse(module.canOpenScheme(""))
+    }
+
+    @Test
+    fun testCanOpenScheme_whitespaceReturnsFalse() {
+        assertFalse(module.canOpenScheme("   "))
+    }
+
+    @Test
+    fun testCanOpenScheme_nonEmptySwallowsRuntimeException() {
+        // In plain JUnit (no Robolectric), Uri.parse and PackageManager calls
+        // throw RuntimeException("Stub!"). The implementation must catch and
+        // return false rather than propagate.
+        assertFalse(module.canOpenScheme("instagram"))
+    }
+
+    @Test
+    fun testPlatformCapabilities_androidShape() {
+        val caps = module.platformCapabilities()
+        assertEquals("android", caps["platform"])
+        assertEquals(true, caps["canListInstalledApps"])
+        assertEquals(true, caps["canCheckUrlScheme"])
+        assertNull(caps["urlSchemeLimit"])
+        assertEquals(false, caps["requiresSchemeDeclaration"])
+        // requiresRuntimePermission depends on Build.VERSION.SDK_INT (returns 0
+        // in test stubs, so expect false here).
+        assertEquals(false, caps["requiresRuntimePermission"])
+    }
 }

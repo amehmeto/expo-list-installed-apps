@@ -2,10 +2,12 @@ import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import {
   AppType,
   InstalledApp,
+  PlatformCapabilities,
 } from 'expo-list-installed-apps/ExpoListInstalledApps.types'
 import { useEffect, useState } from 'react'
 import {
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -65,6 +67,62 @@ function AppCard(props: { item: InstalledApp; index: number }) {
   )
 }
 
+const PROBE_SCHEMES = ['maps', 'music', 'messages', 'facetime', 'mailto']
+
+function DetectionPanel() {
+  const [results, setResults] = useState<Record<string, boolean> | null>(null)
+  const [capabilities, setCapabilities] =
+    useState<PlatformCapabilities | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const probe = async () => {
+    setBusy(true)
+    try {
+      const entries = await Promise.all(
+        PROBE_SCHEMES.map(async (s) => [
+          s,
+          await ExpoListInstalledApps.canOpenApp(s),
+        ]),
+      )
+      setResults(Object.fromEntries(entries) as Record<string, boolean>)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const loadCapabilities = async () => {
+    setCapabilities(await ExpoListInstalledApps.getPlatformCapabilities())
+  }
+
+  return (
+    <View style={styles.detectionPanel}>
+      <Text style={styles.header}>App detection (M2)</Text>
+      <View style={styles.detectionButtons}>
+        <Button
+          title={busy ? 'Probing...' : 'Probe schemes'}
+          onPress={probe}
+          disabled={busy}
+        />
+        <Button title="Capabilities" onPress={loadCapabilities} />
+      </View>
+      {results && (
+        <View>
+          {PROBE_SCHEMES.map((s) => (
+            <Text key={s} style={styles.appDetail}>
+              {`${s}://`} → {results[s] ? 'installed ✓' : 'not installed'}
+            </Text>
+          ))}
+        </View>
+      )}
+      {capabilities && (
+        <Text style={styles.appDetail}>
+          {JSON.stringify(capabilities, null, 2)}
+        </Text>
+      )}
+    </View>
+  )
+}
+
 function AppContent() {
   const insets = useSafeAreaInsets()
   const [appType, setAppType] = useState(AppType.ALL)
@@ -102,6 +160,7 @@ function AppContent() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {Platform.OS === 'ios' && <DetectionPanel />}
       <View style={styles.filterButtons}>
         <Button
           color={appType === AppType.ALL ? 'blue' : 'grey'}
@@ -179,5 +238,16 @@ const styles = StyleSheet.create({
   filterButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
+  },
+  detectionPanel: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#eef2ff',
+  },
+  detectionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 8,
   },
 })

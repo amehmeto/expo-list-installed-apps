@@ -1,9 +1,19 @@
 // Import the native module. On web, it will be resolved to ExpoListInstalledApps.web.ts
 // and on native platforms to ExpoListInstalledApps.ts
-import { AppType, InstalledApp, UniqueBy } from './ExpoListInstalledApps.types'
+import {
+  AppType,
+  InstalledApp,
+  PlatformCapabilities,
+  UniqueBy,
+} from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
-export { AppType, InstalledApp, UniqueBy } from './ExpoListInstalledApps.types'
+export {
+  AppType,
+  InstalledApp,
+  PlatformCapabilities,
+  UniqueBy,
+} from './ExpoListInstalledApps.types'
 
 export async function listInstalledApps(
   options: {
@@ -20,4 +30,14 @@ export async function listInstalledApps(
     return []
   }
   return apps || []
+}
+
+export async function canOpenApp(scheme: string): Promise<boolean> {
+  if (typeof scheme !== 'string' || scheme.trim() === '') return false
+  const result = await ExpoListInstalledAppsModule.canOpenApp(scheme)
+  return result === true
+}
+
+export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
+  return await ExpoListInstalledAppsModule.getPlatformCapabilities()
 }
