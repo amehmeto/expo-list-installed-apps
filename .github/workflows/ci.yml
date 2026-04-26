@@ -163,9 +163,9 @@ jobs:
         working-directory: ./example
         run: npm ci
 
-      - name: Generate iOS project (expo prebuild)
+      - name: Generate iOS project (expo prebuild --clean)
         working-directory: ./example
-        run: npx expo prebuild --platform ios --no-install
+        run: npx expo prebuild --platform ios --clean --no-install
 
       - name: Install Pods
         working-directory: ./example/ios
