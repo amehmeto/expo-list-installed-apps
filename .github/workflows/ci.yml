@@ -167,6 +167,10 @@ jobs:
         working-directory: ./example
         run: npx expo prebuild --platform ios --no-install
 
+      - name: Install @react-native-community/cli (required by Podfile use_native_modules!)
+        working-directory: ./example
+        run: npm install --no-save @react-native-community/cli
+
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
