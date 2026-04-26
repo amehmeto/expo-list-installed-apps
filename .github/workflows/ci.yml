@@ -9,6 +9,26 @@ permissions:
   contents: write
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ios:
+              - 'ios/**'
+              - 'expo-module.config.json'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'example/package.json'
+              - 'example/package-lock.json'
+              - '.github/workflows/ci.yml'
+
   typescript:
     name: TypeScript & Lint
     runs-on: ubuntu-latest
@@ -107,7 +127,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
-          name: "List Installed Apps Example APK - PR #${{ github.event.pull_request.number }} (build ${{ github.run_number }})"
+          name: 'List Installed Apps Example APK - PR #${{ github.event.pull_request.number }} (build ${{ github.run_number }})'
           body: |
             Automated build of the **List Installed Apps** example app for PR #${{ github.event.pull_request.number }}.
 
@@ -119,3 +139,52 @@ jobs:
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  ios:
+    name: iOS Build
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install example dependencies
+        working-directory: ./example
+        run: npm ci
+
+      - name: Generate iOS project (expo prebuild)
+        working-directory: ./example
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('example/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install Pods
+        working-directory: ./example/ios
+        run: pod install
+
+      - name: Build iOS example app
+        working-directory: ./example/ios
+        run: |
+          xcodebuild build \
+            -workspace expolistinstalledappsexample.xcworkspace \
+            -scheme expolistinstalledappsexample \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,OS=latest,name=iPhone 15' \
+            CODE_SIGNING_ALLOWED=NO
