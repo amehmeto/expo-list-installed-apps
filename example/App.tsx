@@ -1,6 +1,8 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import {
   AuthorizationStatus,
+  FamilyActivityPickerView,
+  FamilyActivitySelectionSummary,
   getFamilyControlsAuthorizationStatus,
   requestFamilyControlsAuthorization,
 } from 'expo-list-installed-apps'
@@ -12,6 +14,7 @@ import {
 import { useEffect, useState } from 'react'
 import {
   FlatList,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -135,6 +138,9 @@ function FamilyControlsPanel() {
   )
   const [requesting, setRequesting] = useState(false)
   const [lastResult, setLastResult] = useState<boolean | null>(null)
+  const [pickerVisible, setPickerVisible] = useState(false)
+  const [selection, setSelection] =
+    useState<FamilyActivitySelectionSummary | null>(null)
 
   const refreshStatus = () => setStatus(getFamilyControlsAuthorizationStatus())
 
@@ -158,14 +164,44 @@ function FamilyControlsPanel() {
           {`Last request → ${lastResult ? 'approved' : 'declined / unavailable'}`}
         </Text>
       )}
-      <View style={styles.detectionButtons}>
-        <Button
-          title={requesting ? 'Requesting...' : 'Request authorization'}
-          onPress={requestAuth}
-          disabled={requesting}
-        />
-        <Button title="Refresh status" onPress={refreshStatus} />
+      {selection && (
+        <Text style={styles.appDetail}>
+          {`Selection → apps: ${selection.applicationCount}, categories: ${selection.categoryCount}, domains: ${selection.webDomainCount}`}
+        </Text>
+      )}
+      <View style={styles.familyButtons}>
+        <View style={styles.familyButtonRow}>
+          <Button
+            title={requesting ? 'Requesting…' : 'Request authorization'}
+            onPress={requestAuth}
+            disabled={requesting}
+          />
+          <Button title="Refresh status" onPress={refreshStatus} />
+        </View>
+        <Pressable
+          style={styles.primaryAction}
+          onPress={() => setPickerVisible(true)}
+        >
+          <Text style={styles.primaryActionLabel}>Show picker</Text>
+        </Pressable>
       </View>
+      <Modal
+        visible={pickerVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPickerVisible(false)}
+      >
+        <View style={styles.pickerContainer}>
+          <View style={styles.pickerHeader}>
+            <Button title="Done" onPress={() => setPickerVisible(false)} />
+          </View>
+          <FamilyActivityPickerView
+            style={{ flex: 1 }}
+            headerTitle="Pick apps to manage"
+            onSelectionChange={({ nativeEvent }) => setSelection(nativeEvent)}
+          />
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -304,6 +340,39 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     backgroundColor: '#f5f0ff',
+  },
+  pickerContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  familyButtons: {
+    marginTop: 8,
+    gap: 8,
+  },
+  familyButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  primaryAction: {
+    backgroundColor: '#6366f1',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  primaryActionLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   detectionButtons: {
     flexDirection: 'row',
