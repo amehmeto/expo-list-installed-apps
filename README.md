@@ -136,6 +136,25 @@ Notes:
 - Returns `false` / `'unavailable'` on Android, web, and iOS < 16.
 - App Store distribution requires Apple to approve the Family Controls entitlement separately. Development and TestFlight builds work with the dev provisioning profile.
 
+#### App selection picker
+
+Once authorized, render Apple's `FamilyActivityPicker` so the user can select apps, categories, and web domains to manage:
+
+```tsx
+import { FamilyActivityPickerView } from 'expo-list-installed-apps'
+;<FamilyActivityPickerView
+  style={{ flex: 1 }}
+  headerTitle="Pick apps to manage"
+  onSelectionChange={({ nativeEvent }) => {
+    console.log(nativeEvent.applicationCount, nativeEvent.categoryCount)
+  }}
+/>
+```
+
+The picker's selection consists of opaque `ApplicationToken`s — bundle IDs and app names are not exposed to your main app. Only counts cross the JS bridge here; resolving tokens to names requires a `DeviceActivityReport` extension (M4).
+
+On Android (and iOS < 16) `FamilyActivityPickerView` renders an empty `View` so the import is safe in cross-platform code.
+
 ## Notes
 
 - This module uses native code and does not support web.

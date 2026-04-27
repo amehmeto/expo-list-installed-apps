@@ -16,6 +16,11 @@ export {
   PlatformCapabilities,
   UniqueBy,
 } from './ExpoListInstalledApps.types'
+export { FamilyActivityPickerView } from './FamilyActivityPickerView'
+export type {
+  FamilyActivityPickerViewProps,
+  FamilyActivitySelectionSummary,
+} from './FamilyActivityPickerView'
 
 export async function listInstalledApps(
   options: {

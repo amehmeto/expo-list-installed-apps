@@ -17,6 +17,15 @@ jest.mock('./ExpoListInstalledAppsModule', () => ({
   getFamilyControlsAuthorizationStatus: jest.fn(),
 }))
 
+// Stub native deps pulled in transitively by FamilyActivityPickerView
+jest.mock('react-native', () => ({
+  Platform: { OS: 'ios' },
+  View: 'View',
+}))
+jest.mock('expo-modules-core', () => ({
+  requireNativeViewManager: jest.fn(() => 'NativeStub'),
+}))
+
 describe('listInstalledApps', () => {
   const mockApps = [
     {

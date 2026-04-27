@@ -60,6 +60,8 @@ public final class ExpoListInstalledAppsModule: Module {
       #endif
       return "unavailable"
     }
+
+    View(FamilyActivityPickerView.self)
   }
 
   private static var familyControlsAvailable: Bool {
