@@ -2,6 +2,7 @@
 // and on native platforms to ExpoListInstalledApps.ts
 import {
   AppType,
+  AuthorizationStatus,
   InstalledApp,
   PlatformCapabilities,
   UniqueBy,
@@ -10,6 +11,7 @@ import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
 export {
   AppType,
+  AuthorizationStatus,
   InstalledApp,
   PlatformCapabilities,
   UniqueBy,
@@ -40,4 +42,38 @@ export async function canOpenApp(scheme: string): Promise<boolean> {
 
 export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
   return await ExpoListInstalledAppsModule.getPlatformCapabilities()
+}
+
+const AUTHORIZATION_STATUSES: ReadonlySet<AuthorizationStatus> = new Set([
+  'approved',
+  'denied',
+  'notDetermined',
+  'unavailable',
+  'unknown',
+])
+
+export async function requestFamilyControlsAuthorization(): Promise<boolean> {
+  if (
+    typeof ExpoListInstalledAppsModule.requestFamilyControlsAuthorization !==
+    'function'
+  ) {
+    return false
+  }
+  const result =
+    await ExpoListInstalledAppsModule.requestFamilyControlsAuthorization()
+  return result === true
+}
+
+export function getFamilyControlsAuthorizationStatus(): AuthorizationStatus {
+  if (
+    typeof ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus !==
+    'function'
+  ) {
+    return 'unavailable'
+  }
+  const result =
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus()
+  return AUTHORIZATION_STATUSES.has(result as AuthorizationStatus)
+    ? (result as AuthorizationStatus)
+    : 'unknown'
 }

@@ -101,6 +101,41 @@ type InstalledApp = {
 }
 ```
 
+### iOS FamilyControls (Screen Time API)
+
+iOS 16+ exposes the FamilyControls authorization flow used by Screen Time-based blockers. This is the prerequisite for the upcoming `FamilyActivityPicker` and shielding APIs.
+
+```typescript
+import {
+  requestFamilyControlsAuthorization,
+  getFamilyControlsAuthorizationStatus,
+} from 'expo-list-installed-apps'
+
+const status = getFamilyControlsAuthorizationStatus()
+// 'approved' | 'denied' | 'notDetermined' | 'unavailable' | 'unknown'
+
+if (status === 'notDetermined') {
+  const approved = await requestFamilyControlsAuthorization()
+}
+```
+
+To enable the underlying entitlement (`com.apple.developer.family-controls`), opt in via the bundled config plugin:
+
+```json
+{
+  "expo": {
+    "plugins": [
+      ["expo-list-installed-apps", { "ios": { "familyControls": true } }]
+    ]
+  }
+}
+```
+
+Notes:
+
+- Returns `false` / `'unavailable'` on Android, web, and iOS < 16.
+- App Store distribution requires Apple to approve the Family Controls entitlement separately. Development and TestFlight builds work with the dev provisioning profile.
+
 ## Notes
 
 - This module uses native code and does not support web.

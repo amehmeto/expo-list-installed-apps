@@ -44,6 +44,9 @@ export enum UniqueBy {
  *   returns `false`. Use the bundled Expo config plugin to inject them.
  * - `requiresRuntimePermission`: Android API 30+ requires the
  *   `QUERY_ALL_PACKAGES` permission to enumerate apps.
+ * - `familyControlsAvailable`: iOS 16+ FamilyControls framework is usable.
+ *   Always `false` on Android/web. Even when `true`, Screen Time APIs require
+ *   the `com.apple.developer.family-controls` entitlement to actually work.
  */
 export type PlatformCapabilities = {
   platform: 'ios' | 'android' | 'web'
@@ -52,4 +55,24 @@ export type PlatformCapabilities = {
   urlSchemeLimit: number | null
   requiresSchemeDeclaration: boolean
   requiresRuntimePermission: boolean
+  familyControlsAvailable: boolean
 }
+
+/**
+ * Status of the iOS FamilyControls authorization. Returned by
+ * `getFamilyControlsAuthorizationStatus()`.
+ *
+ * - `approved`: user granted Screen Time access.
+ * - `denied`: user denied Screen Time access.
+ * - `notDetermined`: authorization has not been requested yet.
+ * - `unavailable`: platform does not support FamilyControls (Android, web,
+ *   or iOS < 16).
+ * - `unknown`: an authorization status was returned that this version of the
+ *   module does not recognize.
+ */
+export type AuthorizationStatus =
+  | 'approved'
+  | 'denied'
+  | 'notDetermined'
+  | 'unavailable'
+  | 'unknown'

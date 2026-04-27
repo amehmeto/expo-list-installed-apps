@@ -86,5 +86,6 @@ class ExpoListInstalledAppsModuleTest {
         // requiresRuntimePermission depends on Build.VERSION.SDK_INT (returns 0
         // in test stubs, so expect false here).
         assertEquals(false, caps["requiresRuntimePermission"])
+        assertEquals(false, caps["familyControlsAvailable"])
     }
 }

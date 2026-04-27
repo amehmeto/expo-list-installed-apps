@@ -1,12 +1,20 @@
 import { AppType, UniqueBy } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
-import { canOpenApp, getPlatformCapabilities, listInstalledApps } from './index'
+import {
+  canOpenApp,
+  getFamilyControlsAuthorizationStatus,
+  getPlatformCapabilities,
+  listInstalledApps,
+  requestFamilyControlsAuthorization,
+} from './index'
 
 // Mock the native module
 jest.mock('./ExpoListInstalledAppsModule', () => ({
   listInstalledApps: jest.fn(),
   canOpenApp: jest.fn(),
   getPlatformCapabilities: jest.fn(),
+  requestFamilyControlsAuthorization: jest.fn(),
+  getFamilyControlsAuthorizationStatus: jest.fn(),
 }))
 
 describe('listInstalledApps', () => {
@@ -234,6 +242,7 @@ describe('getPlatformCapabilities', () => {
       urlSchemeLimit: 50,
       requiresSchemeDeclaration: true,
       requiresRuntimePermission: false,
+      familyControlsAvailable: true,
     }
     ExpoListInstalledAppsModule.getPlatformCapabilities.mockResolvedValue(
       iosCaps,
@@ -252,6 +261,7 @@ describe('getPlatformCapabilities', () => {
       urlSchemeLimit: null,
       requiresSchemeDeclaration: false,
       requiresRuntimePermission: true,
+      familyControlsAvailable: false,
     }
     ExpoListInstalledAppsModule.getPlatformCapabilities.mockResolvedValue(
       androidCaps,
@@ -260,5 +270,64 @@ describe('getPlatformCapabilities', () => {
     const result = await getPlatformCapabilities()
 
     expect(result).toEqual(androidCaps)
+  })
+})
+
+describe('requestFamilyControlsAuthorization', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockClear()
+  })
+
+  it('returns true when the native module reports approved', async () => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockResolvedValue(
+      true,
+    )
+    const result = await requestFamilyControlsAuthorization()
+    expect(result).toBe(true)
+    expect(
+      ExpoListInstalledAppsModule.requestFamilyControlsAuthorization,
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns false when the native module reports denied', async () => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockResolvedValue(
+      false,
+    )
+    const result = await requestFamilyControlsAuthorization()
+    expect(result).toBe(false)
+  })
+
+  it('returns false when the native module returns a non-boolean value', async () => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockResolvedValue(
+      null,
+    )
+    const result = await requestFamilyControlsAuthorization()
+    expect(result).toBe(false)
+  })
+})
+
+describe('getFamilyControlsAuthorizationStatus', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockClear()
+  })
+
+  it.each([
+    ['approved'],
+    ['denied'],
+    ['notDetermined'],
+    ['unavailable'],
+    ['unknown'],
+  ])('passes through the %s status', (status) => {
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockReturnValue(
+      status,
+    )
+    expect(getFamilyControlsAuthorizationStatus()).toBe(status)
+  })
+
+  it('returns "unknown" when the native module returns an unrecognized status', () => {
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockReturnValue(
+      'gibberish',
+    )
+    expect(getFamilyControlsAuthorizationStatus()).toBe('unknown')
   })
 })

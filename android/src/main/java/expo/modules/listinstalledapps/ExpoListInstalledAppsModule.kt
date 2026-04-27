@@ -117,6 +117,7 @@ class ExpoListInstalledAppsModule : Module() {
         "urlSchemeLimit" to null,
         "requiresSchemeDeclaration" to false,
         "requiresRuntimePermission" to (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R),
+        "familyControlsAvailable" to false,
     )
 
     fun queryInstalledApps(type: String, uniqueBy: String): List<Map<String, String>> {
@@ -228,6 +229,14 @@ class ExpoListInstalledAppsModule : Module() {
 
         AsyncFunction("getPlatformCapabilities") {
             platformCapabilities()
+        }
+
+        AsyncFunction("requestFamilyControlsAuthorization") {
+            false
+        }
+
+        Function("getFamilyControlsAuthorizationStatus") {
+            "unavailable"
         }
     }
 }
