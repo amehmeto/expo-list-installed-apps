@@ -35,7 +35,18 @@
       [
         "../app.plugin.js",
         {
-          "urlSchemes": ["maps", "music", "messages", "facetime", "mailto"]
+          "urlSchemes": ["maps", "music", "messages", "facetime", "mailto"],
+          "ios": {
+            "familyControls": true
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
         }
       ]
     ]

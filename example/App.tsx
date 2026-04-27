@@ -1,5 +1,10 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import {
+  AuthorizationStatus,
+  getFamilyControlsAuthorizationStatus,
+  requestFamilyControlsAuthorization,
+} from 'expo-list-installed-apps'
+import {
   AppType,
   InstalledApp,
   PlatformCapabilities,
@@ -71,8 +76,9 @@ const PROBE_SCHEMES = ['maps', 'music', 'messages', 'facetime', 'mailto']
 
 function DetectionPanel() {
   const [results, setResults] = useState<Record<string, boolean> | null>(null)
-  const [capabilities, setCapabilities] =
-    useState<PlatformCapabilities | null>(null)
+  const [capabilities, setCapabilities] = useState<PlatformCapabilities | null>(
+    null,
+  )
   const [busy, setBusy] = useState(false)
 
   const probe = async () => {
@@ -123,6 +129,47 @@ function DetectionPanel() {
   )
 }
 
+function FamilyControlsPanel() {
+  const [status, setStatus] = useState<AuthorizationStatus>(() =>
+    getFamilyControlsAuthorizationStatus(),
+  )
+  const [requesting, setRequesting] = useState(false)
+  const [lastResult, setLastResult] = useState<boolean | null>(null)
+
+  const refreshStatus = () => setStatus(getFamilyControlsAuthorizationStatus())
+
+  const requestAuth = async () => {
+    setRequesting(true)
+    try {
+      const approved = await requestFamilyControlsAuthorization()
+      setLastResult(approved)
+      refreshStatus()
+    } finally {
+      setRequesting(false)
+    }
+  }
+
+  return (
+    <View style={styles.familyPanel}>
+      <Text style={styles.header}>FamilyControls (M3)</Text>
+      <Text style={styles.appDetail}>{`Status: ${status}`}</Text>
+      {lastResult !== null && (
+        <Text style={styles.appDetail}>
+          {`Last request → ${lastResult ? 'approved' : 'declined / unavailable'}`}
+        </Text>
+      )}
+      <View style={styles.detectionButtons}>
+        <Button
+          title={requesting ? 'Requesting...' : 'Request authorization'}
+          onPress={requestAuth}
+          disabled={requesting}
+        />
+        <Button title="Refresh status" onPress={refreshStatus} />
+      </View>
+    </View>
+  )
+}
+
 function AppContent() {
   const insets = useSafeAreaInsets()
   const [appType, setAppType] = useState(AppType.ALL)
@@ -160,7 +207,12 @@ function AppContent() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {Platform.OS === 'ios' && <DetectionPanel />}
+      {Platform.OS === 'ios' && (
+        <>
+          <DetectionPanel />
+          <FamilyControlsPanel />
+        </>
+      )}
       <View style={styles.filterButtons}>
         <Button
           color={appType === AppType.ALL ? 'blue' : 'grey'}
@@ -190,7 +242,9 @@ function AppContent() {
             renderItem={renderItem}
             keyExtractor={(item) => item.packageName}
             style={styles.list}
-            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) + 20 }}
+            contentContainerStyle={{
+              paddingBottom: Math.max(insets.bottom, 40) + 20,
+            }}
             overScrollMode="never"
             bounces={false}
           />
@@ -244,6 +298,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     backgroundColor: '#eef2ff',
+  },
+  familyPanel: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#f5f0ff',
   },
   detectionButtons: {
     flexDirection: 'row',
