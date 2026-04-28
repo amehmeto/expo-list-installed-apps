@@ -16,11 +16,6 @@ export {
   PlatformCapabilities,
   UniqueBy,
 } from './ExpoListInstalledApps.types'
-export { FamilyActivityPickerView } from './FamilyActivityPickerView'
-export type {
-  FamilyActivityPickerViewProps,
-  FamilyActivitySelectionSummary,
-} from './FamilyActivityPickerView'
 
 export async function listInstalledApps(
   options: {
@@ -32,7 +27,6 @@ export async function listInstalledApps(
     options?.type ?? AppType.ALL,
     options?.uniqueBy ?? UniqueBy.PACKAGE,
   )) as Promise<InstalledApp[]>
-  // Check if the result is an array
   if (!Array.isArray(apps)) {
     return []
   }
@@ -40,8 +34,11 @@ export async function listInstalledApps(
 }
 
 export async function canOpenApp(scheme: string): Promise<boolean> {
-  if (typeof scheme !== 'string' || scheme.trim() === '') return false
-  const result = await ExpoListInstalledAppsModule.canOpenApp(scheme)
+  if (typeof scheme !== 'string') return false
+  let trimmed = scheme.trim()
+  if (trimmed.endsWith('://')) trimmed = trimmed.slice(0, -3)
+  if (trimmed === '') return false
+  const result = await ExpoListInstalledAppsModule.canOpenApp(trimmed)
   return result === true
 }
 
@@ -57,6 +54,14 @@ const AUTHORIZATION_STATUSES: ReadonlySet<AuthorizationStatus> = new Set([
   'unknown',
 ])
 
+/**
+ * Requests Family Controls authorization (iOS 16+ only).
+ *
+ * Resolves to `true` when the user approves and `false` when the user declines
+ * or the platform is unsupported. Rejects on system errors — most commonly
+ * when the `com.apple.developer.family-controls` entitlement is missing from
+ * the build. Always wrap the call in try/catch in production code.
+ */
 export async function requestFamilyControlsAuthorization(): Promise<boolean> {
   if (
     typeof ExpoListInstalledAppsModule.requestFamilyControlsAuthorization !==

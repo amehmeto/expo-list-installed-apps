@@ -5,15 +5,15 @@ import SwiftUI
 import FamilyControls
 #endif
 
-public final class FamilyActivityPickerViewProps: ExpoSwiftUI.ViewProps {
+public final class FamilyActivityPickerProps: ExpoSwiftUI.ViewProps {
   @Field public var headerTitle: String = ""
-  public var onSelectionChange = EventDispatcher()
+  public var onSelectionCountsChange = EventDispatcher()
 }
 
-public struct FamilyActivityPickerView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
-  public var props: FamilyActivityPickerViewProps
+public struct FamilyActivityPicker: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingView {
+  public var props: FamilyActivityPickerProps
 
-  public init(props: FamilyActivityPickerViewProps) {
+  public init(props: FamilyActivityPickerProps) {
     self.props = props
   }
 
@@ -35,9 +35,11 @@ public struct FamilyActivityPickerView: ExpoSwiftUI.View, ExpoSwiftUI.WithHostin
 #if canImport(FamilyControls)
 @available(iOS 16.0, *)
 private struct FamilyActivityPickerInner: View {
-  @ObservedObject var props: FamilyActivityPickerViewProps
+  @ObservedObject var props: FamilyActivityPickerProps
   @State private var selection = FamilyActivitySelection()
 
+  // TODO: when the iOS floor moves to 17, use FamilyActivityPicker(headerText:selection:)
+  // and drop the manual Text() wrapper.
   var body: some View {
     VStack(spacing: 0) {
       if !props.headerTitle.isEmpty {
@@ -45,9 +47,9 @@ private struct FamilyActivityPickerInner: View {
           .font(.headline)
           .padding()
       }
-      FamilyActivityPicker(selection: $selection)
+      FamilyControls.FamilyActivityPicker(selection: $selection)
         .onChange(of: selection) { newValue in
-          props.onSelectionChange([
+          props.onSelectionCountsChange([
             "applicationCount": newValue.applicationTokens.count,
             "categoryCount": newValue.categoryTokens.count,
             "webDomainCount": newValue.webDomainTokens.count,

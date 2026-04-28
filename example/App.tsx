@@ -1,8 +1,6 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import {
   AuthorizationStatus,
-  FamilyActivityPickerView,
-  FamilyActivitySelectionSummary,
   getFamilyControlsAuthorizationStatus,
   requestFamilyControlsAuthorization,
 } from 'expo-list-installed-apps'
@@ -11,6 +9,10 @@ import {
   InstalledApp,
   PlatformCapabilities,
 } from 'expo-list-installed-apps/ExpoListInstalledApps.types'
+import {
+  FamilyActivityPicker,
+  FamilyActivitySelectionCounts,
+} from 'expo-list-installed-apps/picker'
 import { useEffect, useState } from 'react'
 import {
   FlatList,
@@ -77,6 +79,9 @@ function AppCard(props: { item: InstalledApp; index: number }) {
 
 const PROBE_SCHEMES = ['maps', 'music', 'messages', 'facetime', 'mailto']
 
+const FILTER_ACTIVE = 'blue'
+const FILTER_INACTIVE = 'grey'
+
 function DetectionPanel() {
   const [results, setResults] = useState<Record<string, boolean> | null>(null)
   const [capabilities, setCapabilities] = useState<PlatformCapabilities | null>(
@@ -140,7 +145,7 @@ function FamilyControlsPanel() {
   const [lastResult, setLastResult] = useState<boolean | null>(null)
   const [pickerVisible, setPickerVisible] = useState(false)
   const [selection, setSelection] =
-    useState<FamilyActivitySelectionSummary | null>(null)
+    useState<FamilyActivitySelectionCounts | null>(null)
 
   const refreshStatus = () => setStatus(getFamilyControlsAuthorizationStatus())
 
@@ -150,6 +155,9 @@ function FamilyControlsPanel() {
       const approved = await requestFamilyControlsAuthorization()
       setLastResult(approved)
       refreshStatus()
+    } catch (error) {
+      console.warn('FamilyControls authorization failed:', error)
+      setLastResult(false)
     } finally {
       setRequesting(false)
     }
@@ -195,10 +203,12 @@ function FamilyControlsPanel() {
           <View style={styles.pickerHeader}>
             <Button title="Done" onPress={() => setPickerVisible(false)} />
           </View>
-          <FamilyActivityPickerView
+          <FamilyActivityPicker
             style={{ flex: 1 }}
             headerTitle="Pick apps to manage"
-            onSelectionChange={({ nativeEvent }) => setSelection(nativeEvent)}
+            onSelectionCountsChange={({ nativeEvent }) =>
+              setSelection(nativeEvent)
+            }
           />
         </View>
       </Modal>
@@ -211,6 +221,12 @@ function AppContent() {
   const [appType, setAppType] = useState(AppType.ALL)
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
   const [isLoading, setLoading] = useState(true)
+
+  const filters: { type: AppType; label: string }[] = [
+    { type: AppType.ALL, label: 'All' },
+    { type: AppType.USER, label: 'User' },
+    { type: AppType.SYSTEM, label: 'System' },
+  ]
 
   useEffect(() => {
     const fetchData = async () => {
@@ -250,21 +266,25 @@ function AppContent() {
         </>
       )}
       <View style={styles.filterButtons}>
-        <Button
-          color={appType === AppType.ALL ? 'blue' : 'grey'}
-          onPress={() => setAppType(AppType.ALL)}
-          title="All"
-        />
-        <Button
-          color={appType === AppType.USER ? 'blue' : 'grey'}
-          onPress={() => setAppType(AppType.USER)}
-          title="User"
-        />
-        <Button
-          color={appType === AppType.SYSTEM ? 'blue' : 'grey'}
-          onPress={() => setAppType(AppType.SYSTEM)}
-          title="System"
-        />
+        {filters.map(({ type, label }) => {
+          const isActive = appType === type
+          return (
+            <Pressable
+              key={type}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
+              onPress={() => setAppType(type)}
+              style={[
+                styles.filterButton,
+                {
+                  backgroundColor: isActive ? FILTER_ACTIVE : FILTER_INACTIVE,
+                },
+              ]}
+            >
+              <Text style={styles.filterButtonLabel}>{label}</Text>
+            </Pressable>
+          )
+        })}
       </View>
       {isLoading ? (
         <ActivityIndicator size="large" color="blue" />
@@ -328,6 +348,18 @@ const styles = StyleSheet.create({
   filterButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
+    marginVertical: 8,
+  },
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  filterButtonLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   detectionPanel: {
     marginBottom: 16,

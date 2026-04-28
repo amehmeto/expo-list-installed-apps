@@ -49,7 +49,7 @@ iOS cannot enumerate every installed app — Apple has no public API for that, b
 - **M3** — `FamilyActivityPicker` view component for user-driven selection plus app shielding via `ManagedSettings`.
 - **M4** — Extension-based name/icon resolution and scheduled blocking.
 
-Today (M1), `listInstalledApps()` is wired up on iOS and returns `[]` so cross-platform consumers can import the module without crashing. See `docs/ios-implementation-plan.md` for the full milestone breakdown.
+On iOS, `listInstalledApps()` returns `[]` so cross-platform consumers can import the module without crashing. iOS detection lives in `canOpenApp(scheme)` (M2) and the `FamilyActivityPicker` view (M3); name resolution lands in M4 via a `DeviceActivityReport` extension.
 
 ## API
 
@@ -119,13 +119,14 @@ if (status === 'notDetermined') {
 }
 ```
 
-To enable the underlying entitlement (`com.apple.developer.family-controls`), opt in via the bundled config plugin:
+To enable the underlying entitlement (`com.apple.developer.family-controls`), opt in via the bundled config plugin and bump your iOS deployment target to 16.0:
 
 ```json
 {
   "expo": {
     "plugins": [
-      ["expo-list-installed-apps", { "ios": { "familyControls": true } }]
+      ["expo-list-installed-apps", { "ios": { "familyControls": true } }],
+      ["expo-build-properties", { "ios": { "deploymentTarget": "16.0" } }]
     ]
   }
 }
@@ -133,27 +134,29 @@ To enable the underlying entitlement (`com.apple.developer.family-controls`), op
 
 Notes:
 
-- Returns `false` / `'unavailable'` on Android, web, and iOS < 16.
+- Consumers using `FamilyActivityPicker` or FamilyControls authorization must set their iOS deployment target to **16.0** or higher.
+- Returns `false` / `'unavailable'` on Android and iOS < 16.
+- `requestFamilyControlsAuthorization()` rejects on system errors (most commonly when the entitlement is missing from the build) and resolves `true`/`false` for the user's decision — always wrap the call in try/catch.
 - App Store distribution requires Apple to approve the Family Controls entitlement separately. Development and TestFlight builds work with the dev provisioning profile.
 
 #### App selection picker
 
-Once authorized, render Apple's `FamilyActivityPicker` so the user can select apps, categories, and web domains to manage:
+Once authorized, render Apple's `FamilyActivityPicker` so the user can select apps, categories, and web domains to manage. The picker is exported from a sub-path so Android-only consumers don't pull in the iOS view manager:
 
 ```tsx
-import { FamilyActivityPickerView } from 'expo-list-installed-apps'
-;<FamilyActivityPickerView
+import { FamilyActivityPicker } from 'expo-list-installed-apps/picker'
+;<FamilyActivityPicker
   style={{ flex: 1 }}
   headerTitle="Pick apps to manage"
-  onSelectionChange={({ nativeEvent }) => {
+  onSelectionCountsChange={({ nativeEvent }) => {
     console.log(nativeEvent.applicationCount, nativeEvent.categoryCount)
   }}
 />
 ```
 
-The picker's selection consists of opaque `ApplicationToken`s — bundle IDs and app names are not exposed to your main app. Only counts cross the JS bridge here; resolving tokens to names requires a `DeviceActivityReport` extension (M4).
+The picker's selection consists of opaque `ApplicationToken`s — bundle IDs and app names are not exposed to your main app. Only counts (`applicationCount`, `categoryCount`, `webDomainCount`) cross the JS bridge today; resolving tokens to names or acting on the selection requires a `DeviceActivityReport` extension (M4).
 
-On Android (and iOS < 16) `FamilyActivityPickerView` renders an empty `View` so the import is safe in cross-platform code.
+On Android (and iOS < 16) `FamilyActivityPicker` renders an empty `View` so the import is safe in cross-platform code. Branch on `getPlatformCapabilities().familyControlsAvailable` if you need to hide the UI entirely.
 
 ## Notes
 

@@ -14,14 +14,17 @@ public final class ExpoListInstalledAppsModule: Module {
     }
 
     AsyncFunction("canOpenApp") { (scheme: String) -> Bool in
-      let trimmed = scheme.trimmingCharacters(in: .whitespacesAndNewlines)
+      var trimmed = scheme.trimmingCharacters(in: .whitespacesAndNewlines)
+      if trimmed.hasSuffix("://") {
+        trimmed = String(trimmed.dropLast(3))
+      }
       guard !trimmed.isEmpty, let url = URL(string: "\(trimmed)://") else {
         return false
       }
       return await MainActor.run { UIApplication.shared.canOpenURL(url) }
     }
 
-    AsyncFunction("getPlatformCapabilities") { () -> [String: Any?] in
+    AsyncFunction("getPlatformCapabilities") { () -> [String: Any] in
       [
         "platform": "ios",
         "canListInstalledApps": false,
@@ -36,12 +39,8 @@ public final class ExpoListInstalledAppsModule: Module {
     AsyncFunction("requestFamilyControlsAuthorization") { () -> Bool in
       #if canImport(FamilyControls)
       if #available(iOS 16.0, *) {
-        do {
-          try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-          return AuthorizationCenter.shared.authorizationStatus == .approved
-        } catch {
-          return false
-        }
+        try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+        return AuthorizationCenter.shared.authorizationStatus == .approved
       }
       #endif
       return false
@@ -61,7 +60,7 @@ public final class ExpoListInstalledAppsModule: Module {
       return "unavailable"
     }
 
-    View(FamilyActivityPickerView.self)
+    View(FamilyActivityPicker.self)
   }
 
   private static var familyControlsAvailable: Bool {

@@ -1,4 +1,4 @@
-describe('FamilyActivityPickerView', () => {
+describe('FamilyActivityPicker', () => {
   beforeEach(() => {
     jest.resetModules()
   })
@@ -11,11 +11,11 @@ describe('FamilyActivityPickerView', () => {
     const requireNativeViewManager = jest.fn(() => 'NativeStub')
     jest.doMock('expo-modules-core', () => ({ requireNativeViewManager }))
 
-    require('./FamilyActivityPickerView')
+    require('./FamilyActivityPicker')
 
     expect(requireNativeViewManager).toHaveBeenCalledWith(
       'ExpoListInstalledApps',
-      'FamilyActivityPickerView',
+      'FamilyActivityPicker',
     )
   })
 
@@ -27,12 +27,12 @@ describe('FamilyActivityPickerView', () => {
     const requireNativeViewManager = jest.fn(() => 'NativeStub')
     jest.doMock('expo-modules-core', () => ({ requireNativeViewManager }))
 
-    require('./FamilyActivityPickerView')
+    require('./FamilyActivityPicker')
 
     expect(requireNativeViewManager).not.toHaveBeenCalled()
   })
 
-  it('exports the FamilyActivityPickerView component', () => {
+  it('exports the FamilyActivityPicker component', () => {
     jest.doMock('react-native', () => ({
       Platform: { OS: 'ios' },
       View: 'View',
@@ -41,7 +41,7 @@ describe('FamilyActivityPickerView', () => {
       requireNativeViewManager: jest.fn(() => 'NativeStub'),
     }))
 
-    const mod = require('./FamilyActivityPickerView')
-    expect(typeof mod.FamilyActivityPickerView).toBe('function')
+    const mod = require('./FamilyActivityPicker')
+    expect(typeof mod.FamilyActivityPicker).toBe('function')
   })
 })

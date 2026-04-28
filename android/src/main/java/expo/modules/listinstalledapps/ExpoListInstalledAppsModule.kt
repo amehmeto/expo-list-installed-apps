@@ -101,11 +101,13 @@ class ExpoListInstalledAppsModule : Module() {
 
 
     fun canOpenScheme(scheme: String): Boolean {
-        if (scheme.isBlank()) return false
+        val trimmed = scheme.trim().removeSuffix("://")
+        if (trimmed.isBlank()) return false
         return try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$scheme://"))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$trimmed://"))
             getContext().packageManager.resolveActivity(intent, 0) != null
-        } catch (@Suppress("UNUSED_PARAMETER", "SwallowedException") e: Exception) {
+        } catch (e: IllegalArgumentException) {
+            Log.w("ExpoListInstalledApps", "canOpenScheme failed for '$scheme'", e)
             false
         }
     }

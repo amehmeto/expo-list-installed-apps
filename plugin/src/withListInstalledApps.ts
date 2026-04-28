@@ -27,7 +27,9 @@ const withQueriesSchemes: ConfigPlugin<{ urlSchemes: string[] }> = (
   withInfoPlist(config, (cfg) => {
     const existing = (cfg.modResults.LSApplicationQueriesSchemes ??
       []) as string[]
-    const merged = Array.from(new Set([...existing, ...urlSchemes]))
+    const merged = Array.from(
+      new Set([...existing, ...urlSchemes].map((s) => s.toLowerCase())),
+    )
 
     if (merged.length > IOS_SCHEME_LIMIT) {
       console.warn(

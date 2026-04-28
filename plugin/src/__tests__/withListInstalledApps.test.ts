@@ -79,6 +79,27 @@ describe('withListInstalledApps', () => {
       )
       warn.mockRestore()
     })
+
+    it('dedupes case-insensitively', async () => {
+      const result = withListInstalledApps(baseConfig() as never, {
+        urlSchemes: ['Maps', 'maps', 'MAPS', 'music'],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
+      expect(infoPlist?.LSApplicationQueriesSchemes).toEqual(['maps', 'music'])
+    })
+
+    it('lowercases existing schemes during merge dedupe', async () => {
+      const result = withListInstalledApps(baseConfig() as never, {
+        urlSchemes: ['maps'],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod, {
+        LSApplicationQueriesSchemes: ['Maps', 'instagram'],
+      })
+      expect(infoPlist?.LSApplicationQueriesSchemes).toEqual([
+        'maps',
+        'instagram',
+      ])
+    })
   })
 
   describe('ios.familyControls', () => {
@@ -116,6 +137,18 @@ describe('withListInstalledApps', () => {
         result.mods?.ios?.entitlements as Mod,
       )
       expect(infoPlist?.LSApplicationQueriesSchemes).toEqual(['instagram'])
+      expect(entitlements?.['com.apple.developer.family-controls']).toBe(true)
+    })
+
+    it('coexists with pre-existing entitlement keys', async () => {
+      const result = withListInstalledApps(baseConfig() as never, {
+        ios: { familyControls: true },
+      })
+      const entitlements = await runMod(
+        result.mods?.ios?.entitlements as Mod,
+        { 'aps-environment': 'development' },
+      )
+      expect(entitlements?.['aps-environment']).toBe('development')
       expect(entitlements?.['com.apple.developer.family-controls']).toBe(true)
     })
   })
