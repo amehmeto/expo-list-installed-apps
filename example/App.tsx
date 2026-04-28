@@ -31,46 +31,36 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context'
 
-function AppCard(props: { item: InstalledApp; index: number }) {
+function AppCard({ item, index }: { item: InstalledApp; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false)
+
+  const details: { label: string; value: string | number }[] = [
+    { label: 'Package Name', value: item.packageName },
+    { label: 'Version Name', value: item.versionName },
+    { label: 'Version Code', value: item.versionCode },
+    { label: 'First Install Time', value: item.firstInstallTime },
+    { label: 'Last Update Time', value: item.lastUpdateTime },
+    { label: 'APK Directory', value: item.apkDir },
+    { label: 'Size', value: `${item.size} bytes` },
+  ]
 
   return (
     <View style={styles.appContainer}>
       <Pressable
-        style={{ display: 'flex', flexDirection: 'row' }}
-        onPress={() => setIsExpanded(!isExpanded)}
+        style={styles.appCardRow}
+        onPress={() => setIsExpanded((v) => !v)}
       >
-        <Image
-          source={{ uri: props.item.icon }}
-          style={{ width: 28, height: 28, marginRight: 10 }}
-        />
-        <Text
-          style={styles.appName}
-        >{`${props.index + 1}. ${props.item.appName}`}</Text>
+        <Image source={{ uri: item.icon }} style={styles.appIcon} />
+        <Text style={styles.appName}>{`${index + 1}. ${item.appName}`}</Text>
       </Pressable>
       {isExpanded && (
         <View>
-          <Text
-            style={styles.appDetail}
-          >{`Package Name: ${props.item.packageName}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Version Name: ${props.item.versionName}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Version Code: ${props.item.versionCode}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`First Install Time: ${props.item.firstInstallTime}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Last Update Time: ${props.item.lastUpdateTime}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`APK Directory: ${props.item.apkDir}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Size: ${props.item.size} bytes`}</Text>
+          {details.map(({ label, value }) => (
+            <Text
+              key={label}
+              style={styles.appDetail}
+            >{`${label}: ${value}`}</Text>
+          ))}
         </View>
       )}
     </View>
@@ -110,7 +100,7 @@ function DetectionPanel() {
 
   return (
     <View style={styles.detectionPanel}>
-      <Text style={styles.header}>App detection (M2)</Text>
+      <Text style={styles.header}>App detection</Text>
       <View style={styles.detectionButtons}>
         <Button
           title={busy ? 'Probing...' : 'Probe schemes'}
@@ -165,7 +155,7 @@ function FamilyControlsPanel() {
 
   return (
     <View style={styles.familyPanel}>
-      <Text style={styles.header}>FamilyControls (M3)</Text>
+      <Text style={styles.header}>Family Controls</Text>
       <Text style={styles.appDetail}>{`Status: ${status}`}</Text>
       {lastResult !== null && (
         <Text style={styles.appDetail}>
@@ -265,47 +255,50 @@ function AppContent() {
           <FamilyControlsPanel />
         </>
       )}
-      <View style={styles.filterButtons}>
-        {filters.map(({ type, label }) => {
-          const isActive = appType === type
-          return (
-            <Pressable
-              key={type}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isActive }}
-              onPress={() => setAppType(type)}
-              style={[
-                styles.filterButton,
-                {
-                  backgroundColor: isActive ? FILTER_ACTIVE : FILTER_INACTIVE,
-                },
-              ]}
-            >
-              <Text style={styles.filterButtonLabel}>{label}</Text>
-            </Pressable>
-          )
-        })}
-      </View>
-      {isLoading ? (
-        <ActivityIndicator size="large" color="blue" />
-      ) : (
-        <>
-          <Text style={styles.header}>
-            Installed apps ({installedApps.length}):
-          </Text>
-          <FlatList
-            data={installedApps}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.packageName}
-            style={styles.list}
-            contentContainerStyle={{
-              paddingBottom: Math.max(insets.bottom, 40) + 20,
-            }}
-            overScrollMode="never"
-            bounces={false}
-          />
-        </>
+      {Platform.OS === 'android' && (
+        <View style={styles.filterButtons}>
+          {filters.map(({ type, label }) => {
+            const isActive = appType === type
+            return (
+              <Pressable
+                key={type}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                onPress={() => setAppType(type)}
+                style={[
+                  styles.filterButton,
+                  {
+                    backgroundColor: isActive ? FILTER_ACTIVE : FILTER_INACTIVE,
+                  },
+                ]}
+              >
+                <Text style={styles.filterButtonLabel}>{label}</Text>
+              </Pressable>
+            )
+          })}
+        </View>
       )}
+      {Platform.OS === 'android' &&
+        (isLoading ? (
+          <ActivityIndicator size="large" color="blue" />
+        ) : (
+          <>
+            <Text style={styles.header}>
+              Installed apps ({installedApps.length}):
+            </Text>
+            <FlatList
+              data={installedApps}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.packageName}
+              style={styles.list}
+              contentContainerStyle={{
+                paddingBottom: Math.max(insets.bottom, 40) + 20,
+              }}
+              overScrollMode="never"
+              bounces={false}
+            />
+          </>
+        ))}
     </View>
   )
 }
@@ -337,6 +330,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     backgroundColor: '#f0f0f0',
+  },
+  appCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appIcon: {
+    width: 28,
+    height: 28,
+    marginRight: 10,
   },
   appName: {
     fontSize: 18,

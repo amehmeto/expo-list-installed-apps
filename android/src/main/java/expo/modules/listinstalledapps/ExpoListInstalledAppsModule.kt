@@ -106,8 +106,15 @@ class ExpoListInstalledAppsModule : Module() {
         return try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$trimmed://"))
             getContext().packageManager.resolveActivity(intent, 0) != null
-        } catch (e: IllegalArgumentException) {
-            Log.w("ExpoListInstalledApps", "canOpenScheme failed for '$scheme'", e)
+        } catch (e: RuntimeException) {
+            // android.util.Log is stubbed in plain JUnit and itself throws
+            // RuntimeException("Stub!"); keep the log inside its own guard so
+            // it doesn't escape and break the swallow contract.
+            try {
+                Log.w("ExpoListInstalledApps", "canOpenScheme failed for '$scheme'", e)
+            } catch (_: RuntimeException) {
+                // Ignored: only happens in non-Robolectric unit tests.
+            }
             false
         }
     }
