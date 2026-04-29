@@ -1,5 +1,10 @@
 name: CI
 
+# NOTE: the `ios` job is conditional on the path filter and may be skipped
+# entirely on non-iOS PRs. Do NOT mark it as a required status check in branch
+# protection — GitHub treats `skipped` as `not-success` in some configurations
+# and would block doc-only PRs.
+
 on:
   push:
     branches: [master, develop]
@@ -30,7 +35,6 @@ jobs:
               - 'example/package.json'
               - 'example/package-lock.json'
               - 'example/app.json'
-              - '.github/workflows/ci.yml'
 
   typescript:
     name: TypeScript & Lint
@@ -176,8 +180,8 @@ jobs:
         run: npx expo prebuild --platform ios --clean --no-install
 
       - name: Install Pods
-        working-directory: ./example/ios
-        run: pod install
+        working-directory: ./example
+        run: npx pod-install
 
       - name: Build iOS example app
         working-directory: ./example/ios

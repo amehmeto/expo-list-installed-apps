@@ -2,6 +2,7 @@
 // and on native platforms to ExpoListInstalledApps.ts
 import {
   AppType,
+  AuthorizationStatus,
   InstalledApp,
   PlatformCapabilities,
   UniqueBy,
@@ -10,6 +11,7 @@ import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
 export {
   AppType,
+  AuthorizationStatus,
   InstalledApp,
   PlatformCapabilities,
   UniqueBy,
@@ -25,7 +27,6 @@ export async function listInstalledApps(
     options?.type ?? AppType.ALL,
     options?.uniqueBy ?? UniqueBy.PACKAGE,
   )) as Promise<InstalledApp[]>
-  // Check if the result is an array
   if (!Array.isArray(apps)) {
     return []
   }
@@ -33,11 +34,56 @@ export async function listInstalledApps(
 }
 
 export async function canOpenApp(scheme: string): Promise<boolean> {
-  if (typeof scheme !== 'string' || scheme.trim() === '') return false
-  const result = await ExpoListInstalledAppsModule.canOpenApp(scheme)
+  if (typeof scheme !== 'string') return false
+  let trimmed = scheme.trim()
+  if (trimmed.endsWith('://')) trimmed = trimmed.slice(0, -3)
+  if (trimmed === '') return false
+  const result = await ExpoListInstalledAppsModule.canOpenApp(trimmed)
   return result === true
 }
 
 export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
   return await ExpoListInstalledAppsModule.getPlatformCapabilities()
+}
+
+const AUTHORIZATION_STATUSES: ReadonlySet<AuthorizationStatus> = new Set([
+  'approved',
+  'denied',
+  'notDetermined',
+  'unavailable',
+  'unknown',
+])
+
+/**
+ * Requests Family Controls authorization (iOS 16+ only).
+ *
+ * Resolves to `true` when the user approves and `false` when the user declines
+ * or the platform is unsupported. Rejects on system errors — most commonly
+ * when the `com.apple.developer.family-controls` entitlement is missing from
+ * the build. Always wrap the call in try/catch in production code.
+ */
+export async function requestFamilyControlsAuthorization(): Promise<boolean> {
+  if (
+    typeof ExpoListInstalledAppsModule.requestFamilyControlsAuthorization !==
+    'function'
+  ) {
+    return false
+  }
+  const result =
+    await ExpoListInstalledAppsModule.requestFamilyControlsAuthorization()
+  return result === true
+}
+
+export function getFamilyControlsAuthorizationStatus(): AuthorizationStatus {
+  if (
+    typeof ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus !==
+    'function'
+  ) {
+    return 'unavailable'
+  }
+  const result =
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus()
+  return AUTHORIZATION_STATUSES.has(result as AuthorizationStatus)
+    ? (result as AuthorizationStatus)
+    : 'unknown'
 }

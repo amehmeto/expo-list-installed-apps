@@ -1,6 +1,10 @@
 import ExpoModulesCore
 import UIKit
 
+#if canImport(FamilyControls)
+import FamilyControls
+#endif
+
 public final class ExpoListInstalledAppsModule: Module {
   public func definition() -> ModuleDefinition {
     Name("ExpoListInstalledApps")
@@ -10,14 +14,17 @@ public final class ExpoListInstalledAppsModule: Module {
     }
 
     AsyncFunction("canOpenApp") { (scheme: String) -> Bool in
-      let trimmed = scheme.trimmingCharacters(in: .whitespacesAndNewlines)
+      var trimmed = scheme.trimmingCharacters(in: .whitespacesAndNewlines)
+      if trimmed.hasSuffix("://") {
+        trimmed = String(trimmed.dropLast(3))
+      }
       guard !trimmed.isEmpty, let url = URL(string: "\(trimmed)://") else {
         return false
       }
       return await MainActor.run { UIApplication.shared.canOpenURL(url) }
     }
 
-    AsyncFunction("getPlatformCapabilities") { () -> [String: Any?] in
+    AsyncFunction("getPlatformCapabilities") { () -> [String: Any] in
       [
         "platform": "ios",
         "canListInstalledApps": false,
@@ -25,7 +32,41 @@ public final class ExpoListInstalledAppsModule: Module {
         "urlSchemeLimit": 50,
         "requiresSchemeDeclaration": true,
         "requiresRuntimePermission": false,
+        "familyControlsAvailable": Self.familyControlsAvailable,
       ]
     }
+
+    AsyncFunction("requestFamilyControlsAuthorization") { () -> Bool in
+      #if canImport(FamilyControls)
+      if #available(iOS 16.0, *) {
+        try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+        return AuthorizationCenter.shared.authorizationStatus == .approved
+      }
+      #endif
+      return false
+    }
+
+    Function("getFamilyControlsAuthorizationStatus") { () -> String in
+      #if canImport(FamilyControls)
+      if #available(iOS 16.0, *) {
+        switch AuthorizationCenter.shared.authorizationStatus {
+        case .approved: return "approved"
+        case .denied: return "denied"
+        case .notDetermined: return "notDetermined"
+        @unknown default: return "unknown"
+        }
+      }
+      #endif
+      return "unavailable"
+    }
+
+    View(FamilyActivityPicker.self)
+  }
+
+  private static var familyControlsAvailable: Bool {
+    #if canImport(FamilyControls)
+    if #available(iOS 16.0, *) { return true }
+    #endif
+    return false
   }
 }

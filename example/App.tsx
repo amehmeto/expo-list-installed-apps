@@ -1,78 +1,108 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import {
+  AuthorizationStatus,
+  getFamilyControlsAuthorizationStatus,
+  requestFamilyControlsAuthorization,
+} from 'expo-list-installed-apps'
+import {
   AppType,
   InstalledApp,
   PlatformCapabilities,
 } from 'expo-list-installed-apps/ExpoListInstalledApps.types'
+import {
+  FamilyActivityPicker,
+  FamilyActivitySelectionCounts,
+} from 'expo-list-installed-apps/picker'
 import { useEffect, useState } from 'react'
 import {
+  ActivityIndicator,
+  Button,
   FlatList,
+  Image,
+  Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  Image,
-  Pressable,
-  Button,
-  ActivityIndicator,
+  ViewStyle,
 } from 'react-native'
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context'
 
-function AppCard(props: { item: InstalledApp; index: number }) {
+const PROBE_SCHEMES = ['maps', 'music', 'messages', 'facetime', 'mailto']
+const FILTER_ACTIVE = 'blue'
+const FILTER_INACTIVE = 'grey'
+const APP_TYPE_FILTER_LABEL: Record<AppType, string> = {
+  [AppType.ALL]: 'All',
+  [AppType.USER]: 'User',
+  [AppType.SYSTEM]: 'System',
+}
+
+const isAndroid = Platform.OS === 'android'
+const isIOS = Platform.OS === 'ios'
+
+function Panel({
+  title,
+  background,
+  children,
+}: {
+  title: string
+  background: ViewStyle['backgroundColor']
+  children: React.ReactNode
+}) {
+  return (
+    <View style={[styles.panel, { backgroundColor: background }]}>
+      <Text style={styles.header}>{title}</Text>
+      {children}
+    </View>
+  )
+}
+
+function DetailLine({ text }: { text: string }) {
+  return <Text style={styles.appDetail}>{text}</Text>
+}
+
+function AppCard({ item, index }: { item: InstalledApp; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false)
+
+  const details: { label: string; value: string | number }[] = [
+    { label: 'Package Name', value: item.packageName },
+    { label: 'Version Name', value: item.versionName },
+    { label: 'Version Code', value: item.versionCode },
+    { label: 'First Install Time', value: item.firstInstallTime },
+    { label: 'Last Update Time', value: item.lastUpdateTime },
+    { label: 'APK Directory', value: item.apkDir },
+    { label: 'Size', value: `${item.size} bytes` },
+  ]
 
   return (
     <View style={styles.appContainer}>
       <Pressable
-        style={{ display: 'flex', flexDirection: 'row' }}
-        onPress={() => setIsExpanded(!isExpanded)}
+        style={styles.appCardRow}
+        onPress={() => setIsExpanded((v) => !v)}
       >
-        <Image
-          source={{ uri: props.item.icon }}
-          style={{ width: 28, height: 28, marginRight: 10 }}
-        />
-        <Text
-          style={styles.appName}
-        >{`${props.index + 1}. ${props.item.appName}`}</Text>
+        <Image source={{ uri: item.icon }} style={styles.appIcon} />
+        <Text style={styles.appName}>{`${index + 1}. ${item.appName}`}</Text>
       </Pressable>
       {isExpanded && (
         <View>
-          <Text
-            style={styles.appDetail}
-          >{`Package Name: ${props.item.packageName}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Version Name: ${props.item.versionName}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Version Code: ${props.item.versionCode}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`First Install Time: ${props.item.firstInstallTime}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Last Update Time: ${props.item.lastUpdateTime}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`APK Directory: ${props.item.apkDir}`}</Text>
-          <Text
-            style={styles.appDetail}
-          >{`Size: ${props.item.size} bytes`}</Text>
+          {details.map(({ label, value }) => (
+            <DetailLine key={label} text={`${label}: ${value}`} />
+          ))}
         </View>
       )}
     </View>
   )
 }
 
-const PROBE_SCHEMES = ['maps', 'music', 'messages', 'facetime', 'mailto']
-
 function DetectionPanel() {
   const [results, setResults] = useState<Record<string, boolean> | null>(null)
-  const [capabilities, setCapabilities] =
-    useState<PlatformCapabilities | null>(null)
+  const [capabilities, setCapabilities] = useState<PlatformCapabilities | null>(
+    null,
+  )
   const [busy, setBusy] = useState(false)
 
   const probe = async () => {
@@ -95,8 +125,7 @@ function DetectionPanel() {
   }
 
   return (
-    <View style={styles.detectionPanel}>
-      <Text style={styles.header}>App detection (M2)</Text>
+    <Panel title="App detection" background="#eef2ff">
       <View style={styles.detectionButtons}>
         <Button
           title={busy ? 'Probing...' : 'Probe schemes'}
@@ -108,18 +137,177 @@ function DetectionPanel() {
       {results && (
         <View>
           {PROBE_SCHEMES.map((s) => (
-            <Text key={s} style={styles.appDetail}>
-              {`${s}://`} → {results[s] ? 'installed ✓' : 'not installed'}
-            </Text>
+            <DetailLine
+              key={s}
+              text={`${s}:// → ${results[s] ? 'installed ✓' : 'not installed'}`}
+            />
           ))}
         </View>
       )}
       {capabilities && (
-        <Text style={styles.appDetail}>
-          {JSON.stringify(capabilities, null, 2)}
-        </Text>
+        <DetailLine text={JSON.stringify(capabilities, null, 2)} />
       )}
+    </Panel>
+  )
+}
+
+function PickerModal({
+  visible,
+  onClose,
+  onSelectionChange,
+}: {
+  visible: boolean
+  onClose: () => void
+  onSelectionChange: (counts: FamilyActivitySelectionCounts) => void
+}) {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <View style={styles.pickerContainer}>
+        <View style={styles.pickerHeader}>
+          <Button title="Done" onPress={onClose} />
+        </View>
+        <FamilyActivityPicker
+          style={{ flex: 1 }}
+          headerTitle="Pick apps to manage"
+          onSelectionCountsChange={({ nativeEvent }) =>
+            onSelectionChange(nativeEvent)
+          }
+        />
+      </View>
+    </Modal>
+  )
+}
+
+function FamilyControlsPanel() {
+  const [status, setStatus] = useState<AuthorizationStatus>(() =>
+    getFamilyControlsAuthorizationStatus(),
+  )
+  const [requesting, setRequesting] = useState(false)
+  const [lastResult, setLastResult] = useState<boolean | null>(null)
+  const [pickerVisible, setPickerVisible] = useState(false)
+  const [selection, setSelection] =
+    useState<FamilyActivitySelectionCounts | null>(null)
+
+  const refreshStatus = () => setStatus(getFamilyControlsAuthorizationStatus())
+
+  const requestAuth = async () => {
+    setRequesting(true)
+    try {
+      const approved = await requestFamilyControlsAuthorization()
+      setLastResult(approved)
+      refreshStatus()
+    } catch (error) {
+      console.warn('FamilyControls authorization failed:', error)
+      setLastResult(false)
+    } finally {
+      setRequesting(false)
+    }
+  }
+
+  const detailLines = [
+    `Status: ${status}`,
+    lastResult !== null
+      ? `Last request → ${lastResult ? 'approved' : 'declined / unavailable'}`
+      : null,
+    selection
+      ? `Selection → apps: ${selection.applicationCount}, categories: ${selection.categoryCount}, domains: ${selection.webDomainCount}`
+      : null,
+  ].filter((line): line is string => line !== null)
+
+  return (
+    <Panel title="Family Controls" background="#f5f0ff">
+      {detailLines.map((line) => (
+        <DetailLine key={line} text={line} />
+      ))}
+      <View style={styles.familyButtons}>
+        <View style={styles.familyButtonRow}>
+          <Button
+            title={requesting ? 'Requesting…' : 'Request authorization'}
+            onPress={requestAuth}
+            disabled={requesting}
+          />
+          <Button title="Refresh status" onPress={refreshStatus} />
+        </View>
+        <Pressable
+          style={styles.primaryAction}
+          onPress={() => setPickerVisible(true)}
+        >
+          <Text style={styles.primaryActionLabel}>Show picker</Text>
+        </Pressable>
+      </View>
+      <PickerModal
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onSelectionChange={setSelection}
+      />
+    </Panel>
+  )
+}
+
+function FilterButtons({
+  appType,
+  onChange,
+}: {
+  appType: AppType
+  onChange: (type: AppType) => void
+}) {
+  return (
+    <View style={styles.filterButtons}>
+      {(Object.keys(APP_TYPE_FILTER_LABEL) as AppType[]).map((type) => {
+        const isActive = appType === type
+        return (
+          <Pressable
+            key={type}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isActive }}
+            onPress={() => onChange(type)}
+            style={[
+              styles.filterButton,
+              { backgroundColor: isActive ? FILTER_ACTIVE : FILTER_INACTIVE },
+            ]}
+          >
+            <Text style={styles.filterButtonLabel}>
+              {APP_TYPE_FILTER_LABEL[type]}
+            </Text>
+          </Pressable>
+        )
+      })}
     </View>
+  )
+}
+
+function InstalledAppsList({
+  apps,
+  isLoading,
+  bottomInset,
+}: {
+  apps: InstalledApp[]
+  isLoading: boolean
+  bottomInset: number
+}) {
+  if (isLoading) {
+    return <ActivityIndicator size="large" color="blue" />
+  }
+  return (
+    <>
+      <Text style={styles.header}>{`Installed apps (${apps.length}):`}</Text>
+      <FlatList
+        data={apps}
+        renderItem={({ item, index }) => <AppCard item={item} index={index} />}
+        keyExtractor={(item) => item.packageName}
+        style={styles.list}
+        contentContainerStyle={{
+          paddingBottom: Math.max(bottomInset, 40) + 20,
+        }}
+        overScrollMode="never"
+        bounces={false}
+      />
+    </>
   )
 }
 
@@ -136,10 +324,9 @@ function AppContent() {
         const apps = await ExpoListInstalledApps.listInstalledApps({
           type: appType,
         })
-        const sortedApps = apps.sort((a, b) =>
-          a.appName.localeCompare(b.appName),
+        setInstalledApps(
+          apps.sort((a, b) => a.appName.localeCompare(b.appName)),
         )
-        setInstalledApps(sortedApps)
       } catch (error) {
         console.error('Error fetching data:', error)
       }
@@ -148,51 +335,21 @@ function AppContent() {
     fetchData()
   }, [appType])
 
-  const renderItem = ({
-    item,
-    index,
-  }: {
-    item: InstalledApp
-    index: number
-  }) => {
-    return <AppCard item={item} index={index} />
-  }
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {Platform.OS === 'ios' && <DetectionPanel />}
-      <View style={styles.filterButtons}>
-        <Button
-          color={appType === AppType.ALL ? 'blue' : 'grey'}
-          onPress={() => setAppType(AppType.ALL)}
-          title="All"
-        />
-        <Button
-          color={appType === AppType.USER ? 'blue' : 'grey'}
-          onPress={() => setAppType(AppType.USER)}
-          title="User"
-        />
-        <Button
-          color={appType === AppType.SYSTEM ? 'blue' : 'grey'}
-          onPress={() => setAppType(AppType.SYSTEM)}
-          title="System"
-        />
-      </View>
-      {isLoading ? (
-        <ActivityIndicator size="large" color="blue" />
-      ) : (
+      {isIOS && (
         <>
-          <Text style={styles.header}>
-            Installed apps ({installedApps.length}):
-          </Text>
-          <FlatList
-            data={installedApps}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.packageName}
-            style={styles.list}
-            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) + 20 }}
-            overScrollMode="never"
-            bounces={false}
+          <DetectionPanel />
+          <FamilyControlsPanel />
+        </>
+      )}
+      {isAndroid && (
+        <>
+          <FilterButtons appType={appType} onChange={setAppType} />
+          <InstalledAppsList
+            apps={installedApps}
+            isLoading={isLoading}
+            bottomInset={insets.bottom}
           />
         </>
       )}
@@ -222,11 +379,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
   },
+  panel: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 10,
+  },
   appContainer: {
     marginBottom: 20,
     padding: 10,
     borderRadius: 10,
     backgroundColor: '#f0f0f0',
+  },
+  appCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appIcon: {
+    width: 28,
+    height: 28,
+    marginRight: 10,
   },
   appName: {
     fontSize: 18,
@@ -238,12 +409,51 @@ const styles = StyleSheet.create({
   filterButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
+    marginVertical: 8,
   },
-  detectionPanel: {
-    marginBottom: 16,
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  filterButtonLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pickerContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     padding: 12,
-    borderRadius: 10,
-    backgroundColor: '#eef2ff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  familyButtons: {
+    marginTop: 8,
+    gap: 8,
+  },
+  familyButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  primaryAction: {
+    backgroundColor: '#6366f1',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  primaryActionLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   detectionButtons: {
     flexDirection: 'row',
