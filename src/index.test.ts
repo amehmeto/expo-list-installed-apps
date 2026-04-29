@@ -4,6 +4,7 @@ import {
   canOpenApp,
   getFamilyControlsAuthorizationStatus,
   getPlatformCapabilities,
+  getResolvedApps,
   listInstalledApps,
   requestFamilyControlsAuthorization,
 } from './index'
@@ -15,6 +16,7 @@ jest.mock('./ExpoListInstalledAppsModule', () => ({
   getPlatformCapabilities: jest.fn(),
   requestFamilyControlsAuthorization: jest.fn(),
   getFamilyControlsAuthorizationStatus: jest.fn(),
+  getResolvedApps: jest.fn(),
 }))
 
 describe('listInstalledApps', () => {
@@ -372,5 +374,52 @@ describe('getFamilyControlsAuthorizationStatus', () => {
       'gibberish',
     )
     expect(getFamilyControlsAuthorizationStatus()).toBe('unknown')
+  })
+})
+
+describe('getResolvedApps', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.getResolvedApps.mockClear()
+  })
+
+  it('passes through the array returned by the native module', async () => {
+    const resolved = [
+      {
+        packageName: 'com.example.one',
+        appName: 'Example One',
+        versionName: '',
+        versionCode: 0,
+        firstInstallTime: 0,
+        lastUpdateTime: 0,
+        icon: '',
+        apkDir: '',
+        size: 0,
+        activityName: '',
+      },
+    ]
+    ExpoListInstalledAppsModule.getResolvedApps.mockResolvedValue(resolved)
+    const result = await getResolvedApps()
+    expect(result).toEqual(resolved)
+  })
+
+  it('returns [] when the native module returns null', async () => {
+    ExpoListInstalledAppsModule.getResolvedApps.mockResolvedValue(null)
+    expect(await getResolvedApps()).toEqual([])
+  })
+
+  it('returns [] when the native module returns a non-array value', async () => {
+    ExpoListInstalledAppsModule.getResolvedApps.mockResolvedValue({})
+    expect(await getResolvedApps()).toEqual([])
+  })
+
+  it('returns [] when the native module does not implement the function', async () => {
+    const original = ExpoListInstalledAppsModule.getResolvedApps
+    ;(
+      ExpoListInstalledAppsModule as unknown as Record<string, unknown>
+    ).getResolvedApps = undefined
+    expect(await getResolvedApps()).toEqual([])
+    ;(
+      ExpoListInstalledAppsModule as unknown as Record<string, unknown>
+    ).getResolvedApps = original
   })
 })

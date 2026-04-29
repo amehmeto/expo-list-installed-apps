@@ -54,6 +54,7 @@ private struct FamilyActivityPickerInner: View {
             "categoryCount": newValue.categoryTokens.count,
             "webDomainCount": newValue.webDomainTokens.count,
           ])
+          AppGroupSelectionStore.persist(newValue)
         }
     }
   }

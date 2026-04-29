@@ -36,20 +36,20 @@ async function getApps() {
 
 ## Platform Support
 
-| Feature                                   | Android | iOS                                             |
-| ----------------------------------------- | ------- | ----------------------------------------------- |
-| List all installed apps                   | Full    | Not possible (Apple privacy) — returns `[]`     |
-| Detect specific app by URL scheme         | M2      | M2                                              |
-| User-driven app selection (system picker) | N/A     | M3 (requires Apple Family Controls entitlement) |
-| App metadata (name, icon, version)        | Full    | M4 (extension-only, limited resolution)         |
+| Feature                                   | Android | iOS                                                                                   |
+| ----------------------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| List all installed apps                   | Full    | Not possible (Apple privacy) — returns `[]`                                           |
+| Detect specific app by URL scheme         | M2      | M2                                                                                    |
+| User-driven app selection (system picker) | N/A     | M3 (requires Apple Family Controls entitlement)                                       |
+| App metadata (name, icon, version)        | Full    | M4 — names only via `getResolvedApps()`; bundle IDs may be empty; icons not supported |
 
 iOS cannot enumerate every installed app — Apple has no public API for that, by design. iOS support therefore takes a different shape than Android:
 
 - **M2** — `canOpenApp(scheme)` to check if a known app is installed via URL scheme (Android via `PackageManager`, iOS via `UIApplication.canOpenURL`).
 - **M3** — `FamilyActivityPicker` view component for user-driven selection plus app shielding via `ManagedSettings`.
-- **M4** — Extension-based name/icon resolution and scheduled blocking.
+- **M4** — Extension-based name resolution: a `DeviceActivityReportExtension` (auto-injected by the config plugin) resolves opaque picker tokens into display names, surfaced as `getResolvedApps()`. Icon and version resolution remain out of scope (extension memory ceiling is 5 MB).
 
-On iOS, `listInstalledApps()` returns `[]` so cross-platform consumers can import the module without crashing. iOS detection lives in `canOpenApp(scheme)` (M2) and the `FamilyActivityPicker` view (M3); name resolution lands in M4 via a `DeviceActivityReport` extension.
+On iOS, `listInstalledApps()` returns `[]` so cross-platform consumers can import the module without crashing. iOS detection lives in `canOpenApp(scheme)` (M2), the `FamilyActivityPicker` view (M3), and `getResolvedApps()` (M4).
 
 ## API
 
@@ -154,9 +154,49 @@ import { FamilyActivityPicker } from 'expo-list-installed-apps/picker'
 />
 ```
 
-The picker's selection consists of opaque `ApplicationToken`s — bundle IDs and app names are not exposed to your main app. Only counts (`applicationCount`, `categoryCount`, `webDomainCount`) cross the JS bridge today; resolving tokens to names or acting on the selection requires a `DeviceActivityReport` extension (M4).
+The picker's selection consists of opaque `ApplicationToken`s — bundle IDs and app names are not exposed to your main app directly. Only counts (`applicationCount`, `categoryCount`, `webDomainCount`) cross the JS bridge synchronously; to resolve tokens to display names, use `getResolvedApps()` together with the bundled `DeviceActivityReportExtension` (M4 — see below).
 
 On Android (and iOS < 16) `FamilyActivityPicker` renders an empty `View` so the import is safe in cross-platform code. Branch on `getPlatformCapabilities().familyControlsAvailable` if you need to hide the UI entirely.
+
+#### Resolving picker tokens to app names (M4)
+
+Apple only exposes `localizedDisplayName` (and sometimes `bundleIdentifier`) on `ApplicationToken` from inside a `DeviceActivityReportExtension`. The bundled config plugin auto-injects that extension target during `expo prebuild` and shares an App Group with the main app so resolved data can be read back via `getResolvedApps()`.
+
+Opt in by adding an App Group and `deviceActivityReport: true` to the plugin options:
+
+```jsonc
+{
+  "expo": {
+    "plugins": [
+      [
+        "expo-list-installed-apps",
+        {
+          "ios": {
+            "familyControls": true,
+            "appGroups": ["group.your.bundle.id"],
+            "deviceActivityReport": true
+          }
+        }
+      ],
+      ["expo-build-properties", { "ios": { "deploymentTarget": "16.0" } }]
+    ]
+  }
+}
+```
+
+```ts
+import { getResolvedApps } from 'expo-list-installed-apps'
+
+const apps = await getResolvedApps()
+// [{ appName: 'Mail', packageName: 'com.apple.mobilemail', ... }, ...]
+```
+
+Caveats:
+
+- The extension is OS-scheduled, not on-demand — the first call after a fresh selection may return `[]`. Re-call after a few seconds, or render a `DeviceActivityReport` SwiftUI scene with the picker filter to nudge the OS to invoke the extension.
+- `bundleIdentifier` is reported as `nil` for some apps inside the extension; in that case `packageName` will be empty and only `appName` is populated.
+- Icon, version, and install-time fields are filled with empty defaults — extensions cap at 5 MB of memory, so we deliberately do not load app icons here.
+- The App Group identifier you pass in `appGroups[0]` must be enabled for the bundle ID in your Apple Developer account; the same identifier is automatically applied to the extension target.
 
 ## Notes
 
