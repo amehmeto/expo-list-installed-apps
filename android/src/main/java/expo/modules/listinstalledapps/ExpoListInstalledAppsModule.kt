@@ -101,11 +101,20 @@ class ExpoListInstalledAppsModule : Module() {
 
 
     fun canOpenScheme(scheme: String): Boolean {
-        if (scheme.isBlank()) return false
+        val trimmed = scheme.trim().removeSuffix("://")
+        if (trimmed.isBlank()) return false
         return try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$scheme://"))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$trimmed://"))
             getContext().packageManager.resolveActivity(intent, 0) != null
-        } catch (@Suppress("UNUSED_PARAMETER", "SwallowedException") e: Exception) {
+        } catch (e: RuntimeException) {
+            // android.util.Log is stubbed in plain JUnit and itself throws
+            // RuntimeException("Stub!"); keep the log inside its own guard so
+            // it doesn't escape and break the swallow contract.
+            try {
+                Log.w("ExpoListInstalledApps", "canOpenScheme failed for '$scheme'", e)
+            } catch (_: RuntimeException) {
+                // Ignored: only happens in non-Robolectric unit tests.
+            }
             false
         }
     }

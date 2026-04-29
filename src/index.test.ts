@@ -204,6 +204,20 @@ describe('canOpenApp', () => {
     expect(result).toBe(true)
   })
 
+  it('strips a trailing :// from the scheme before forwarding', async () => {
+    ExpoListInstalledAppsModule.canOpenApp.mockResolvedValue(true)
+
+    await canOpenApp('maps://')
+
+    expect(ExpoListInstalledAppsModule.canOpenApp).toHaveBeenCalledWith('maps')
+  })
+
+  it('returns false for a bare :// without forwarding', async () => {
+    const result = await canOpenApp('://')
+    expect(result).toBe(false)
+    expect(ExpoListInstalledAppsModule.canOpenApp).not.toHaveBeenCalled()
+  })
+
   it('returns false when the native module returns false', async () => {
     ExpoListInstalledAppsModule.canOpenApp.mockResolvedValue(false)
 
@@ -270,6 +284,35 @@ describe('getPlatformCapabilities', () => {
     const result = await getPlatformCapabilities()
 
     expect(result).toEqual(androidCaps)
+  })
+
+  // Contract test: the keys returned by getPlatformCapabilities must match
+  // the PlatformCapabilities type exactly. Renaming a field on either side
+  // (Swift / Kotlin / TS) will break this test.
+  it('exposes exactly the documented capability keys', async () => {
+    ExpoListInstalledAppsModule.getPlatformCapabilities.mockResolvedValue({
+      platform: 'ios',
+      canListInstalledApps: false,
+      canCheckUrlScheme: true,
+      urlSchemeLimit: 50,
+      requiresSchemeDeclaration: true,
+      requiresRuntimePermission: false,
+      familyControlsAvailable: true,
+    })
+
+    const result = await getPlatformCapabilities()
+
+    expect(Object.keys(result).sort()).toEqual(
+      [
+        'canCheckUrlScheme',
+        'canListInstalledApps',
+        'familyControlsAvailable',
+        'platform',
+        'requiresRuntimePermission',
+        'requiresSchemeDeclaration',
+        'urlSchemeLimit',
+      ].sort(),
+    )
   })
 })
 

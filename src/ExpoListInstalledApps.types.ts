@@ -45,11 +45,11 @@ export enum UniqueBy {
  * - `requiresRuntimePermission`: Android API 30+ requires the
  *   `QUERY_ALL_PACKAGES` permission to enumerate apps.
  * - `familyControlsAvailable`: iOS 16+ FamilyControls framework is usable.
- *   Always `false` on Android/web. Even when `true`, Screen Time APIs require
+ *   Always `false` on Android. Even when `true`, Screen Time APIs require
  *   the `com.apple.developer.family-controls` entitlement to actually work.
  */
 export type PlatformCapabilities = {
-  platform: 'ios' | 'android' | 'web'
+  platform: 'ios' | 'android'
   canListInstalledApps: boolean
   canCheckUrlScheme: boolean
   urlSchemeLimit: number | null
@@ -65,8 +65,8 @@ export type PlatformCapabilities = {
  * - `approved`: user granted Screen Time access.
  * - `denied`: user denied Screen Time access.
  * - `notDetermined`: authorization has not been requested yet.
- * - `unavailable`: platform does not support FamilyControls (Android, web,
- *   or iOS < 16).
+ * - `unavailable`: platform does not support FamilyControls (Android or
+ *   iOS < 16).
  * - `unknown`: an authorization status was returned that this version of the
  *   module does not recognize.
  */

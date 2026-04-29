@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Expo native module (`@amehmeto/expo-list-installed-apps`) that lists installed apps. Cross-platform (Android + iOS); web unsupported. Uses Expo's module system to bridge TypeScript to native Kotlin and Swift. On iOS, `listInstalledApps()` currently returns `[]` — Apple provides no public API to enumerate installed apps. Real iOS detection lands in M2 (URL-scheme probing) and M3 (FamilyActivityPicker). See `docs/ios-implementation-plan.md`.
+Expo native module (`@amehmeto/expo-list-installed-apps`) that lists installed apps. Cross-platform (Android + iOS); web unsupported. Uses Expo's module system to bridge TypeScript to native Kotlin and Swift. On iOS, `listInstalledApps()` returns `[]` — Apple provides no public API to enumerate installed apps. M2 ships URL-scheme probing via `canOpenApp`; M3 ships FamilyControls authorization plus the `FamilyActivityPicker` view (counts only — name resolution lands in M4 via a `DeviceActivityReport` extension).
 
 ## Commands
 
@@ -54,7 +54,8 @@ cd .. && npx expo run:ios
 
 **Native iOS layer** (`ios/`):
 
-- `ExpoListInstalledAppsModule.swift` — Swift module extending `Module` from `ExpoModulesCore`. M1 stub: `listInstalledApps(type, uniqueBy)` returns `[]`. Real implementation lands in M2/M3.
+- `ExpoListInstalledAppsModule.swift` — Swift module extending `Module` from `ExpoModulesCore`. `listInstalledApps(type, uniqueBy)` returns `[]` (Apple does not expose enumeration). Implements `canOpenApp(scheme)`, `getPlatformCapabilities()`, `requestFamilyControlsAuthorization()`, `getFamilyControlsAuthorizationStatus()`, and registers the `FamilyActivityPicker` SwiftUI view.
+- `FamilyActivityPicker.swift` — SwiftUI view component wrapping Apple's `FamilyActivityPicker`. Emits `onSelectionCountsChange` with `applicationCount` / `categoryCount` / `webDomainCount`. Compile-time gated via `#if canImport(FamilyControls)` and runtime-gated via `#available(iOS 16.0, *)`.
 - `ExpoListInstalledApps.podspec` — CocoaPods spec; depends on `ExpoModulesCore`, iOS 15.1, Swift 5.9. Reads version/license/etc. from `package.json`.
 
 **Module registration**: `expo-module.config.json` registers both the Android (`expo.modules.listinstalledapps.ExpoListInstalledAppsModule`) and iOS (`ExpoListInstalledAppsModule`) modules for Expo autolinking.
