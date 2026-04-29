@@ -6,10 +6,7 @@ import SwiftUI
 @main
 struct DeviceActivityReportExtensionMain: DeviceActivityReportExtension {
   var body: some DeviceActivityReportScene {
-    TotalActivityReport { results in
-      await TokenResolver.resolveAndPersist(from: results)
-      return TotalActivityView()
-    }
+    TotalActivityReport { _ in TotalActivityView() }
   }
 }
 
@@ -33,10 +30,13 @@ extension DeviceActivityReport.Context {
 
 struct TotalActivityReport: DeviceActivityReportScene {
   let context: DeviceActivityReport.Context = .totalActivity
-  let content: (DeviceActivityResults<DeviceActivityData>) -> TotalActivityView
+  // The protocol requires a synchronous content builder — async work happens
+  // inside makeConfiguration. We pass an empty marker String through.
+  let content: (String) -> TotalActivityView
 
-  func makeConfiguration(representing data: DeviceActivityResults<DeviceActivityData>) async -> TotalActivityView {
-    await content(data)
+  func makeConfiguration(representing data: DeviceActivityResults<DeviceActivityData>) async -> String {
+    await TokenResolver.resolveAndPersist(from: data)
+    return ""
   }
 }
 
@@ -49,19 +49,21 @@ enum TokenResolver {
     var resolved: [[String: String]] = []
     var seen = Set<String>()
 
-    for await activity in results {
-      for await categoryData in activity.activityCategories {
-        for await appData in categoryData.applications {
-          let app = appData.application
-          let bundleId = app.bundleIdentifier ?? ""
-          let displayName = app.localizedDisplayName ?? ""
-          let dedupeKey = bundleId.isEmpty ? displayName : bundleId
-          if dedupeKey.isEmpty || seen.contains(dedupeKey) { continue }
-          seen.insert(dedupeKey)
-          resolved.append([
-            "appName": displayName,
-            "bundleId": bundleId,
-          ])
+    for await data in results {
+      for await activitySegment in data.activitySegments {
+        for await categoryActivity in activitySegment.categories {
+          for await applicationActivity in categoryActivity.applications {
+            let app = applicationActivity.application
+            let bundleId = app.bundleIdentifier ?? ""
+            let displayName = app.localizedDisplayName ?? ""
+            let dedupeKey = bundleId.isEmpty ? displayName : bundleId
+            if dedupeKey.isEmpty || seen.contains(dedupeKey) { continue }
+            seen.insert(dedupeKey)
+            resolved.append([
+              "appName": displayName,
+              "bundleId": bundleId,
+            ])
+          }
         }
       }
     }

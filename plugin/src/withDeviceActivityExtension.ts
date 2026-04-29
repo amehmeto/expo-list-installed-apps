@@ -2,7 +2,6 @@ import {
   ConfigPlugin,
   withDangerousMod,
   withXcodeProject,
-  IOSConfig,
 } from '@expo/config-plugins'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -38,13 +37,8 @@ const withExtensionFiles: ConfigPlugin<Options> = (config, { appGroup }) =>
 const withExtensionTarget: ConfigPlugin<Options> = (config) =>
   withXcodeProject(config, (cfg) => {
     const project = cfg.modResults
-    const mainTargetName = IOSConfig.XcodeUtils.getApplicationNativeTarget({
-      project,
-      projectName: cfg.modRequest.projectName!,
-    }).target.name as string
 
-    const existing = project.pbxTargetByName(EXTENSION_TARGET_NAME)
-    if (existing) {
+    if (extensionTargetExists(project)) {
       return cfg
     }
 
@@ -57,9 +51,12 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
       'DeviceActivityReportExtension.swift',
       'TotalActivityReport.swift',
     ]
-    const resourceFiles: string[] = []
     const supportFiles = ['Info.plist', `${EXTENSION_TARGET_NAME}.entitlements`]
 
+    // `addTarget('app_extension', ...)` creates the native target AND the
+    // main app's "Copy Files" Embed-App-Extensions phase with the .appex
+    // already wired in — do NOT add another PBXCopyFilesBuildPhase ourselves
+    // or xcodebuild reports "Unexpected duplicate tasks".
     const target = project.addTarget(
       EXTENSION_TARGET_NAME,
       'app_extension',
@@ -80,7 +77,7 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
       target.uuid,
     )
     project.addBuildPhase(
-      resourceFiles,
+      [],
       'PBXResourcesBuildPhase',
       'Resources',
       target.uuid,
@@ -91,29 +88,11 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
       EXTENSION_TARGET_NAME,
       EXTENSION_TARGET_NAME,
     )
-
-    const groups = project.hash.project.objects.PBXGroup
-    Object.keys(groups).forEach((groupKey) => {
-      if (
-        groups[groupKey].name === undefined &&
-        groups[groupKey].path === undefined
-      ) {
-        project.addToPbxGroup(pbxGroup.uuid, groupKey)
-      }
-    })
-
-    const copyFilesBuildPhase = project.addBuildPhase(
-      [`${EXTENSION_TARGET_NAME}.appex`],
-      'PBXCopyFilesBuildPhase',
-      'Embed App Extensions',
-      project.getFirstTarget().uuid,
-      'app_extension',
-    )
-    copyFilesBuildPhase.buildPhase.dstSubfolderSpec = 13
+    attachGroupToProjectRoot(project, pbxGroup.uuid)
 
     const configurations = project.pbxXCBuildConfigurationSection()
     Object.keys(configurations).forEach((key) => {
-      const buildSettings = configurations[key].buildSettings
+      const buildSettings = configurations[key]?.buildSettings
       if (
         buildSettings &&
         buildSettings.PRODUCT_NAME === `"${EXTENSION_TARGET_NAME}"`
@@ -130,10 +109,42 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
       }
     })
 
-    const mainTargetUuid = project.pbxTargetByName(mainTargetName).uuid
-    project.addTargetDependency(mainTargetUuid, [target.uuid])
-
     return cfg
   })
+
+const extensionTargetExists = (project: {
+  hash: { project: { objects: Record<string, Record<string, unknown>> } }
+}): boolean => {
+  const targets = project.hash.project.objects.PBXNativeTarget ?? {}
+  for (const key of Object.keys(targets)) {
+    if (key.endsWith('_comment')) continue
+    const target = targets[key] as { name?: string } | undefined
+    const name = target?.name?.replace(/"/g, '')
+    if (name === EXTENSION_TARGET_NAME) {
+      return true
+    }
+  }
+  return false
+}
+
+const attachGroupToProjectRoot = (
+  project: {
+    hash: { project: { objects: Record<string, Record<string, unknown>> } }
+    addToPbxGroup: (childUuid: string, parentUuid: string) => void
+  },
+  childUuid: string,
+): void => {
+  const groups = project.hash.project.objects.PBXGroup ?? {}
+  for (const groupKey of Object.keys(groups)) {
+    if (groupKey.endsWith('_comment')) continue
+    const group = groups[groupKey] as
+      | { name?: string; path?: string }
+      | undefined
+    if (group && group.name === undefined && group.path === undefined) {
+      project.addToPbxGroup(childUuid, groupKey)
+      return
+    }
+  }
+}
 
 export default withDeviceActivityExtension
