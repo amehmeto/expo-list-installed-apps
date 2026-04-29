@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.net.Uri
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
@@ -99,6 +100,89 @@ class ExpoListInstalledAppsModule : Module() {
     }
 
 
+    fun canOpenScheme(scheme: String): Boolean {
+        val trimmed = scheme.trim().removeSuffix("://")
+        if (trimmed.isBlank()) return false
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$trimmed://"))
+            getContext().packageManager.resolveActivity(intent, 0) != null
+        } catch (e: RuntimeException) {
+            // android.util.Log is stubbed in plain JUnit and itself throws
+            // RuntimeException("Stub!"); keep the log inside its own guard so
+            // it doesn't escape and break the swallow contract.
+            try {
+                Log.w("ExpoListInstalledApps", "canOpenScheme failed for '$scheme'", e)
+            } catch (_: RuntimeException) {
+                // Ignored: only happens in non-Robolectric unit tests.
+            }
+            false
+        }
+    }
+
+    fun platformCapabilities(): Map<String, Any?> = mapOf(
+        "platform" to "android",
+        "canListInstalledApps" to true,
+        "canCheckUrlScheme" to true,
+        "urlSchemeLimit" to null,
+        "requiresSchemeDeclaration" to false,
+        "requiresRuntimePermission" to (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R),
+        "familyControlsAvailable" to false,
+    )
+
+    fun queryInstalledApps(type: String, uniqueBy: String): List<Map<String, String>> {
+        val context: Context = getContext()
+        checkAndRequestPermission()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (context.checkSelfPermission(Manifest.permission.QUERY_ALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
+                Log.d("ExpoListInstalledApps", "QUERY_ALL_PACKAGES permission not granted")
+            }
+        }
+
+        Log.d("ExpoListInstalledApps", "Current API level: ${Build.VERSION.SDK_INT}")
+
+        var pkgAppsList: List<ResolveInfo> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.queryIntentActivities(
+                Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
+                PackageManager.ResolveInfoFlags.of(0L)
+            )
+        } else {
+            context.packageManager.queryIntentActivities(
+                Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
+                0
+            )
+        }
+
+        if (type.equals("system")) {
+            pkgAppsList = pkgAppsList.filter { packageInfo ->
+                (packageInfo.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) == ApplicationInfo.FLAG_SYSTEM
+            }
+        } else if (type.equals("user")) {
+            pkgAppsList = pkgAppsList.filter { packageInfo ->
+                (packageInfo.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != ApplicationInfo.FLAG_SYSTEM
+            }
+        }
+
+        val appList = mutableListOf<Map<String, String>>()
+        val seenPackages = mutableSetOf<String>()
+
+        for (resolveInfo in pkgAppsList) {
+            val packageName = resolveInfo.activityInfo.packageName
+            val activityName = resolveInfo.activityInfo.name
+
+            if (uniqueBy == UNIQUE_BY_PACKAGE && seenPackages.contains(packageName)) {
+                continue
+            }
+            seenPackages.add(packageName)
+
+            val packageInfo = context.packageManager.getPackageInfo(packageName, PackageManager.GET_META_DATA)
+            val appInfoFormatted = formatAppInfo(packageInfo, activityName)
+            appList.add(appInfoFormatted)
+        }
+
+        return appList
+    }
+
     fun formatAppInfo(packageInfo: PackageInfo, activityName: String): Map<String, String> {
         val context: Context = getContext()
 
@@ -141,68 +225,27 @@ class ExpoListInstalledAppsModule : Module() {
 
         AsyncFunction("listInstalledApps") { type: String, uniqueBy: String ->
             try {
-                val context: Context = getContext()
-
-                checkAndRequestPermission()
-
-                // Check if QUERY_ALL_PACKAGES permission is granted
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    if (context.checkSelfPermission(Manifest.permission.QUERY_ALL_PACKAGES) != PackageManager.PERMISSION_GRANTED) {
-                        Log.d("ExpoListInstalledApps", "QUERY_ALL_PACKAGES permission not granted")
-                    }
-                }
-
-                // Log the current API level
-                Log.d("ExpoListInstalledApps", "Current API level: ${Build.VERSION.SDK_INT}")
-
-                val intent = Intent(Intent.ACTION_MAIN, null)
-                intent.addCategory(Intent.CATEGORY_LAUNCHER)
-                var pkgAppsList: List<ResolveInfo>
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    pkgAppsList = context.packageManager.queryIntentActivities(
-                        Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
-                        PackageManager.ResolveInfoFlags.of(0L)
-                    )
-                } else {
-                    pkgAppsList = context.packageManager.queryIntentActivities(
-                        Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER),
-                        0
-                    )
-                }
-
-                if (type.equals("system")) {
-                    pkgAppsList = pkgAppsList.filter { packageInfo ->
-                        (packageInfo.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) == ApplicationInfo.FLAG_SYSTEM
-                    }
-                } else if (type.equals("user")) {
-                    pkgAppsList = pkgAppsList.filter { packageInfo ->
-                        (packageInfo.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != ApplicationInfo.FLAG_SYSTEM
-                    }
-                }
-
-                val appList = mutableListOf<Map<String, String>>()
-                val seenPackages = mutableSetOf<String>()
-
-                for (resolveInfo in pkgAppsList) {
-                    val packageName = resolveInfo.activityInfo.packageName
-                    val activityName = resolveInfo.activityInfo.name
-
-                    // Deduplicate by package name if uniqueBy is "package"
-                    if (uniqueBy == UNIQUE_BY_PACKAGE && seenPackages.contains(packageName)) {
-                        continue
-                    }
-                    seenPackages.add(packageName)
-
-                    val packageInfo = context.packageManager.getPackageInfo(packageName, PackageManager.GET_META_DATA)
-                    val appInfoFormatted = formatAppInfo(packageInfo, activityName)
-                    appList.add(appInfoFormatted)
-                }
-
-                return@AsyncFunction appList
+                queryInstalledApps(type, uniqueBy)
             } catch (e: Exception) {
                 Log.e("ExpoListInstalledApps", "Error listing installed apps", e)
+                emptyList<Map<String, String>>()
             }
+        }
+
+        AsyncFunction("canOpenApp") { scheme: String ->
+            canOpenScheme(scheme)
+        }
+
+        AsyncFunction("getPlatformCapabilities") {
+            platformCapabilities()
+        }
+
+        AsyncFunction("requestFamilyControlsAuthorization") {
+            false
+        }
+
+        Function("getFamilyControlsAuthorizationStatus") {
+            "unavailable"
         }
     }
 }

@@ -42,7 +42,11 @@
       "bash -c 'cd example/android && ./gradlew :$(node -p \"require(\\\"../../package.json\\\").name.replace(\\\"@\\\", \\\"\\\").replace(\\\"/\\\", \\\"-\\\")\"):detekt'"
     ]
   },
+  "dependencies": {
+    "@expo/config-plugins": "^55.0.0"
+  },
   "devDependencies": {
+    "@babel/preset-react": "^7.25.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/react": "^19.0.0",
