@@ -22,6 +22,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -345,10 +346,13 @@ function AppContent() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {isIOS && (
-        <>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          showsVerticalScrollIndicator
+        >
           <DetectionPanel />
           <FamilyControlsPanel />
-        </>
+        </ScrollView>
       )}
       {isAndroid && (
         <>
