@@ -188,7 +188,9 @@ describe('canOpenApp', () => {
   })
 
   it('returns false for non-string input without calling the native module', async () => {
-    const result = await canOpenApp(undefined as unknown as string)
+    // Intentionally violating the public type to verify the runtime guard.
+    // @ts-expect-error consumers may pass garbage in plain JS
+    const result = await canOpenApp(undefined)
     expect(result).toBe(false)
     expect(ExpoListInstalledAppsModule.canOpenApp).not.toHaveBeenCalled()
   })

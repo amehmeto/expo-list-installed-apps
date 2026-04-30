@@ -23,14 +23,14 @@ export async function listInstalledApps(
     uniqueBy?: UniqueBy
   } = { type: AppType.ALL, uniqueBy: UniqueBy.PACKAGE },
 ): Promise<InstalledApp[]> {
-  const apps = (await ExpoListInstalledAppsModule.listInstalledApps(
+  const apps = await ExpoListInstalledAppsModule.listInstalledApps(
     options?.type ?? AppType.ALL,
     options?.uniqueBy ?? UniqueBy.PACKAGE,
-  )) as Promise<InstalledApp[]>
+  )
   if (!Array.isArray(apps)) {
     return []
   }
-  return apps || []
+  return apps
 }
 
 export async function canOpenApp(scheme: string): Promise<boolean> {
@@ -46,13 +46,23 @@ export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
   return await ExpoListInstalledAppsModule.getPlatformCapabilities()
 }
 
-const AUTHORIZATION_STATUSES: ReadonlySet<AuthorizationStatus> = new Set([
-  'approved',
-  'denied',
-  'notDetermined',
-  'unavailable',
-  'unknown',
-])
+// `satisfies Record<AuthorizationStatus, true>` makes the compiler enforce
+// that every variant of AuthorizationStatus is listed below — adding a new
+// variant without updating this object is a type error.
+const AUTHORIZATION_STATUSES = {
+  approved: true,
+  denied: true,
+  notDetermined: true,
+  unavailable: true,
+  unknown: true,
+} as const satisfies Record<AuthorizationStatus, true>
+
+function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {
+  return (
+    typeof value === 'string' &&
+    Object.prototype.hasOwnProperty.call(AUTHORIZATION_STATUSES, value)
+  )
+}
 
 /**
  * Requests Family Controls authorization (iOS 16+ only).
@@ -83,7 +93,5 @@ export function getFamilyControlsAuthorizationStatus(): AuthorizationStatus {
   }
   const result =
     ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus()
-  return AUTHORIZATION_STATUSES.has(result as AuthorizationStatus)
-    ? (result as AuthorizationStatus)
-    : 'unknown'
+  return isAuthorizationStatus(result) ? result : 'unknown'
 }
