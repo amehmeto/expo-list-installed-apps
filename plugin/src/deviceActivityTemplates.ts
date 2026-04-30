@@ -41,7 +41,11 @@ struct TotalActivityReport: DeviceActivityReportScene {
 }
 
 enum TokenResolver {
-  // App Group identifier — kept in sync with example/app.json by the config plugin.
+  // App Group identifier — template-baked at prebuild time. The main module
+  // reads it from Info.plist via AppGroupStore, but the extension's Info.plist
+  // is also plugin-generated, so baking the constant here keeps the extension
+  // self-contained and avoids round-tripping through another Info.plist key.
+  // The plugin re-renders this file on every prebuild, so it stays in sync.
   static let appGroup = "${appGroup}"
   static let storageKey = "resolvedApps"
 

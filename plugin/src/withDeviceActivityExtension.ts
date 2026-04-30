@@ -106,6 +106,10 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
         buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"'
         buildSettings.SKIP_INSTALL = 'YES'
         buildSettings.GENERATE_INFOPLIST_FILE = 'NO'
+        // Match the Info.plist template's CFBundleShortVersionString / CFBundleVersion
+        // so Xcode archive validation doesn't warn about extension/host version mismatch.
+        buildSettings.MARKETING_VERSION = '1.0'
+        buildSettings.CURRENT_PROJECT_VERSION = '1'
       }
     })
 
