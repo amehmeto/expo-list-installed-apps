@@ -54,6 +54,11 @@ private struct FamilyActivityPickerInner: View {
             "categoryCount": newValue.categoryTokens.count,
             "webDomainCount": newValue.webDomainTokens.count,
           ])
+          // Drop stale resolved data so getResolvedApps() doesn't return
+          // names from the previous selection while the OS reschedules the
+          // report extension for the new one.
+          AppGroupStore.defaults?.removeObject(forKey: AppGroupStore.resolvedAppsKey)
+          AppGroupSelectionStore.persist(newValue)
         }
     }
   }

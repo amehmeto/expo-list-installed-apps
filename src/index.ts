@@ -52,6 +52,32 @@ export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
   return await ExpoListInstalledAppsModule.getPlatformCapabilities()
 }
 
+/**
+ * Returns the apps resolved by the iOS DeviceActivityReportExtension from the
+ * opaque tokens picked by `FamilyActivityPicker`.
+ *
+ * Always `[]` on Android, on iOS < 16, or before the extension has been
+ * triggered for the first time. On iOS, only `appName` and `packageName`
+ * (bundle identifier — may be empty for some apps) are populated; other
+ * `InstalledApp` fields are filled with empty defaults.
+ *
+ * The extension is OS-scheduled, not on-demand: expect a short delay between
+ * a fresh selection and the first non-empty result.
+ */
+export async function getResolvedApps(): Promise<InstalledApp[]> {
+  if (typeof ExpoListInstalledAppsModule.getResolvedApps !== 'function') {
+    return []
+  }
+  const apps = (await ExpoListInstalledAppsModule.getResolvedApps()) as
+    | InstalledApp[]
+    | null
+    | undefined
+  if (!Array.isArray(apps)) {
+    return []
+  }
+  return apps
+}
+
 const AUTHORIZATION_STATUSES: ReadonlySet<AuthorizationStatus> = new Set([
   'approved',
   'denied',

@@ -2,6 +2,7 @@ import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import {
   AuthorizationStatus,
   getFamilyControlsAuthorizationStatus,
+  getResolvedApps,
   requestFamilyControlsAuthorization,
 } from 'expo-list-installed-apps'
 import {
@@ -200,6 +201,8 @@ function FamilyControlsPanel() {
   const [pickerVisible, setPickerVisible] = useState(false)
   const [selection, setSelection] =
     useState<FamilyActivitySelectionCounts | null>(null)
+  const [resolved, setResolved] = useState<InstalledApp[] | null>(null)
+  const [resolving, setResolving] = useState(false)
 
   const refreshStatus = () => setStatus(getFamilyControlsAuthorizationStatus())
 
@@ -217,6 +220,15 @@ function FamilyControlsPanel() {
     }
   }
 
+  const refreshResolved = async () => {
+    setResolving(true)
+    try {
+      setResolved(await getResolvedApps())
+    } finally {
+      setResolving(false)
+    }
+  }
+
   const detailLines = [
     `Status: ${status}`,
     lastResult !== null
@@ -224,6 +236,13 @@ function FamilyControlsPanel() {
       : null,
     selection
       ? `Selection → apps: ${selection.applicationCount}, categories: ${selection.categoryCount}, domains: ${selection.webDomainCount}`
+      : null,
+    resolved
+      ? resolved.length === 0
+        ? 'Resolved → none yet (extension is OS-scheduled; try again in a few seconds)'
+        : `Resolved (${resolved.length}): ${resolved
+            .map((a) => a.appName || a.packageName || '?')
+            .join(', ')}`
       : null,
   ].filter((line): line is string => line !== null)
 
@@ -241,12 +260,19 @@ function FamilyControlsPanel() {
           />
           <Button title="Refresh status" onPress={refreshStatus} />
         </View>
-        <Pressable
-          style={styles.primaryAction}
-          onPress={() => setPickerVisible(true)}
-        >
-          <Text style={styles.primaryActionLabel}>Show picker</Text>
-        </Pressable>
+        <View style={styles.familyButtonRow}>
+          <Pressable
+            style={styles.primaryAction}
+            onPress={() => setPickerVisible(true)}
+          >
+            <Text style={styles.primaryActionLabel}>Show picker</Text>
+          </Pressable>
+          <Button
+            title={resolving ? 'Resolving…' : 'Resolve picked apps'}
+            onPress={refreshResolved}
+            disabled={resolving}
+          />
+        </View>
       </View>
       <PickerModal
         visible={pickerVisible}

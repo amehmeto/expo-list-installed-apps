@@ -46,6 +46,28 @@ public final class ExpoListInstalledAppsModule: Module {
       return false
     }
 
+    AsyncFunction("getResolvedApps") { () -> [[String: Any]] in
+      guard let defaults = AppGroupStore.defaults,
+            let data = defaults.data(forKey: AppGroupStore.resolvedAppsKey),
+            let entries = try? JSONDecoder().decode([[String: String]].self, from: data) else {
+        return []
+      }
+      return entries.map { entry in
+        [
+          "appName": entry["appName"] ?? "",
+          "packageName": entry["bundleId"] ?? "",
+          "versionName": "",
+          "versionCode": 0,
+          "firstInstallTime": 0,
+          "lastUpdateTime": 0,
+          "icon": "",
+          "apkDir": "",
+          "size": 0,
+          "activityName": "",
+        ] as [String: Any]
+      }
+    }
+
     Function("getFamilyControlsAuthorizationStatus") { () -> String in
       #if canImport(FamilyControls)
       if #available(iOS 16.0, *) {
