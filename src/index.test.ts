@@ -1,10 +1,20 @@
 import { AppType, UniqueBy } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
-import { listInstalledApps } from './index'
+import {
+  canOpenApp,
+  getFamilyControlsAuthorizationStatus,
+  getPlatformCapabilities,
+  listInstalledApps,
+  requestFamilyControlsAuthorization,
+} from './index'
 
 // Mock the native module
 jest.mock('./ExpoListInstalledAppsModule', () => ({
   listInstalledApps: jest.fn(),
+  canOpenApp: jest.fn(),
+  getPlatformCapabilities: jest.fn(),
+  requestFamilyControlsAuthorization: jest.fn(),
+  getFamilyControlsAuthorizationStatus: jest.fn(),
 }))
 
 describe('listInstalledApps', () => {
@@ -157,5 +167,210 @@ describe('listInstalledApps', () => {
     const result = await listInstalledApps()
 
     expect(result).toEqual([])
+  })
+})
+
+describe('canOpenApp', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.canOpenApp.mockClear()
+  })
+
+  it('returns false for an empty string without calling the native module', async () => {
+    const result = await canOpenApp('')
+    expect(result).toBe(false)
+    expect(ExpoListInstalledAppsModule.canOpenApp).not.toHaveBeenCalled()
+  })
+
+  it('returns false for whitespace-only input without calling the native module', async () => {
+    const result = await canOpenApp('   ')
+    expect(result).toBe(false)
+    expect(ExpoListInstalledAppsModule.canOpenApp).not.toHaveBeenCalled()
+  })
+
+  it('returns false for non-string input without calling the native module', async () => {
+    const result = await canOpenApp(undefined as unknown as string)
+    expect(result).toBe(false)
+    expect(ExpoListInstalledAppsModule.canOpenApp).not.toHaveBeenCalled()
+  })
+
+  it('forwards the scheme to the native module and returns true when native returns true', async () => {
+    ExpoListInstalledAppsModule.canOpenApp.mockResolvedValue(true)
+
+    const result = await canOpenApp('instagram')
+
+    expect(ExpoListInstalledAppsModule.canOpenApp).toHaveBeenCalledWith(
+      'instagram',
+    )
+    expect(result).toBe(true)
+  })
+
+  it('strips a trailing :// from the scheme before forwarding', async () => {
+    ExpoListInstalledAppsModule.canOpenApp.mockResolvedValue(true)
+
+    await canOpenApp('maps://')
+
+    expect(ExpoListInstalledAppsModule.canOpenApp).toHaveBeenCalledWith('maps')
+  })
+
+  it('returns false for a bare :// without forwarding', async () => {
+    const result = await canOpenApp('://')
+    expect(result).toBe(false)
+    expect(ExpoListInstalledAppsModule.canOpenApp).not.toHaveBeenCalled()
+  })
+
+  it('returns false when the native module returns false', async () => {
+    ExpoListInstalledAppsModule.canOpenApp.mockResolvedValue(false)
+
+    const result = await canOpenApp('instagram')
+
+    expect(result).toBe(false)
+  })
+
+  it('returns false when the native module returns null', async () => {
+    ExpoListInstalledAppsModule.canOpenApp.mockResolvedValue(null)
+
+    const result = await canOpenApp('instagram')
+
+    expect(result).toBe(false)
+  })
+
+  it('returns false when the native module returns undefined', async () => {
+    ExpoListInstalledAppsModule.canOpenApp.mockResolvedValue(undefined)
+
+    const result = await canOpenApp('instagram')
+
+    expect(result).toBe(false)
+  })
+})
+
+describe('getPlatformCapabilities', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.getPlatformCapabilities.mockClear()
+  })
+
+  it('passes through the iOS capabilities object', async () => {
+    const iosCaps = {
+      platform: 'ios',
+      canListInstalledApps: false,
+      canCheckUrlScheme: true,
+      urlSchemeLimit: 50,
+      requiresSchemeDeclaration: true,
+      requiresRuntimePermission: false,
+      familyControlsAvailable: true,
+    }
+    ExpoListInstalledAppsModule.getPlatformCapabilities.mockResolvedValue(
+      iosCaps,
+    )
+
+    const result = await getPlatformCapabilities()
+
+    expect(result).toEqual(iosCaps)
+  })
+
+  it('passes through the Android capabilities object', async () => {
+    const androidCaps = {
+      platform: 'android',
+      canListInstalledApps: true,
+      canCheckUrlScheme: true,
+      urlSchemeLimit: null,
+      requiresSchemeDeclaration: false,
+      requiresRuntimePermission: true,
+      familyControlsAvailable: false,
+    }
+    ExpoListInstalledAppsModule.getPlatformCapabilities.mockResolvedValue(
+      androidCaps,
+    )
+
+    const result = await getPlatformCapabilities()
+
+    expect(result).toEqual(androidCaps)
+  })
+
+  // Contract test: the keys returned by getPlatformCapabilities must match
+  // the PlatformCapabilities type exactly. Renaming a field on either side
+  // (Swift / Kotlin / TS) will break this test.
+  it('exposes exactly the documented capability keys', async () => {
+    ExpoListInstalledAppsModule.getPlatformCapabilities.mockResolvedValue({
+      platform: 'ios',
+      canListInstalledApps: false,
+      canCheckUrlScheme: true,
+      urlSchemeLimit: 50,
+      requiresSchemeDeclaration: true,
+      requiresRuntimePermission: false,
+      familyControlsAvailable: true,
+    })
+
+    const result = await getPlatformCapabilities()
+
+    expect(Object.keys(result).sort()).toEqual(
+      [
+        'canCheckUrlScheme',
+        'canListInstalledApps',
+        'familyControlsAvailable',
+        'platform',
+        'requiresRuntimePermission',
+        'requiresSchemeDeclaration',
+        'urlSchemeLimit',
+      ].sort(),
+    )
+  })
+})
+
+describe('requestFamilyControlsAuthorization', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockClear()
+  })
+
+  it('returns true when the native module reports approved', async () => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockResolvedValue(
+      true,
+    )
+    const result = await requestFamilyControlsAuthorization()
+    expect(result).toBe(true)
+    expect(
+      ExpoListInstalledAppsModule.requestFamilyControlsAuthorization,
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns false when the native module reports denied', async () => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockResolvedValue(
+      false,
+    )
+    const result = await requestFamilyControlsAuthorization()
+    expect(result).toBe(false)
+  })
+
+  it('returns false when the native module returns a non-boolean value', async () => {
+    ExpoListInstalledAppsModule.requestFamilyControlsAuthorization.mockResolvedValue(
+      null,
+    )
+    const result = await requestFamilyControlsAuthorization()
+    expect(result).toBe(false)
+  })
+})
+
+describe('getFamilyControlsAuthorizationStatus', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockClear()
+  })
+
+  it.each([
+    ['approved'],
+    ['denied'],
+    ['notDetermined'],
+    ['unavailable'],
+    ['unknown'],
+  ])('passes through the %s status', (status) => {
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockReturnValue(
+      status,
+    )
+    expect(getFamilyControlsAuthorizationStatus()).toBe(status)
+  })
+
+  it('returns "unknown" when the native module returns an unrecognized status', () => {
+    ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockReturnValue(
+      'gibberish',
+    )
+    expect(getFamilyControlsAuthorizationStatus()).toBe('unknown')
   })
 })
