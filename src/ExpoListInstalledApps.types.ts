@@ -76,3 +76,21 @@ export type AuthorizationStatus =
   | 'notDetermined'
   | 'unavailable'
   | 'unknown'
+
+/**
+ * A known iOS app entry suitable for use with `canOpenApp(scheme)`.
+ *
+ * Pair the bundled `DEFAULT_IOS_APP_CATALOG` with the config plugin's
+ * `useDefaultCatalog: true` option to populate `LSApplicationQueriesSchemes`,
+ * then call `canOpenApp(scheme)` per entry to detect installs.
+ *
+ * Icons are deliberately omitted — consumers supply their own assets to keep
+ * the module bundle small and to avoid bundling third-party brand assets.
+ */
+export type IosKnownApp = {
+  appName: string
+  /** Bare URL scheme (no `://`), e.g. `'instagram'`. */
+  scheme: string
+  /** Stable synthetic identifier, e.g. `'com.burbn.instagram'`. */
+  bundleId: string
+}

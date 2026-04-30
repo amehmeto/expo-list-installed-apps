@@ -1,3 +1,5 @@
+import { DEFAULT_IOS_APP_CATALOG } from '../../../src/iosAppCatalog'
+import { DEFAULT_IOS_APP_SCHEMES } from '../defaultCatalogSchemes'
 import withListInstalledApps from '../withListInstalledApps'
 
 type Mod = (input: {
@@ -99,6 +101,73 @@ describe('withListInstalledApps', () => {
         'maps',
         'instagram',
       ])
+    })
+  })
+
+  describe('useDefaultCatalog', () => {
+    it('does not write LSApplicationQueriesSchemes when omitted and no urlSchemes', () => {
+      const result = withListInstalledApps(baseConfig() as never, {})
+      expect(result.mods?.ios?.infoPlist).toBeUndefined()
+    })
+
+    it('does not write LSApplicationQueriesSchemes when explicitly false', () => {
+      const result = withListInstalledApps(baseConfig() as never, {
+        useDefaultCatalog: false,
+      })
+      expect(result.mods?.ios?.infoPlist).toBeUndefined()
+    })
+
+    it('merges every default catalog scheme when enabled', async () => {
+      const result = withListInstalledApps(baseConfig() as never, {
+        useDefaultCatalog: true,
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
+      const schemes = infoPlist?.LSApplicationQueriesSchemes as string[]
+      for (const scheme of DEFAULT_IOS_APP_SCHEMES) {
+        expect(schemes).toContain(scheme)
+      }
+    })
+
+    it('combines defaults with user-supplied urlSchemes', async () => {
+      const result = withListInstalledApps(baseConfig() as never, {
+        useDefaultCatalog: true,
+        urlSchemes: ['customapp', 'anotherapp'],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
+      const schemes = infoPlist?.LSApplicationQueriesSchemes as string[]
+      expect(schemes).toContain('customapp')
+      expect(schemes).toContain('anotherapp')
+      expect(schemes).toContain(DEFAULT_IOS_APP_SCHEMES[0])
+    })
+
+    it('dedupes when user-supplied scheme overlaps a default', async () => {
+      const overlap = DEFAULT_IOS_APP_SCHEMES[0]
+      const result = withListInstalledApps(baseConfig() as never, {
+        useDefaultCatalog: true,
+        urlSchemes: [overlap.toUpperCase()],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
+      const schemes = infoPlist?.LSApplicationQueriesSchemes as string[]
+      const occurrences = schemes.filter((s) => s === overlap).length
+      expect(occurrences).toBe(1)
+    })
+
+    it('coexists with familyControls', async () => {
+      const result = withListInstalledApps(baseConfig() as never, {
+        useDefaultCatalog: true,
+        ios: { familyControls: true },
+      })
+      expect(result.mods?.ios?.infoPlist).toBeDefined()
+      expect(result.mods?.ios?.entitlements).toBeDefined()
+      const entitlements = await runMod(
+        result.mods?.ios?.entitlements as Mod,
+      )
+      expect(entitlements?.['com.apple.developer.family-controls']).toBe(true)
+    })
+
+    it('plugin-side scheme list mirrors the source-of-truth catalog', () => {
+      const sourceSchemes = DEFAULT_IOS_APP_CATALOG.map((a) => a.scheme)
+      expect([...DEFAULT_IOS_APP_SCHEMES]).toEqual(sourceSchemes)
     })
   })
 

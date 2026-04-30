@@ -13,9 +13,15 @@ export {
   AppType,
   AuthorizationStatus,
   InstalledApp,
+  IosKnownApp,
   PlatformCapabilities,
   UniqueBy,
 } from './ExpoListInstalledApps.types'
+
+export {
+  DEFAULT_IOS_APP_CATALOG,
+  DEFAULT_IOS_APP_SCHEMES,
+} from './iosAppCatalog'
 
 export async function listInstalledApps(
   options: {

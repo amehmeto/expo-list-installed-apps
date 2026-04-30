@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Expo native module (`@amehmeto/expo-list-installed-apps`) that lists installed apps. Cross-platform (Android + iOS); web unsupported. Uses Expo's module system to bridge TypeScript to native Kotlin and Swift. On iOS, `listInstalledApps()` returns `[]` — Apple provides no public API to enumerate installed apps. M2 ships URL-scheme probing via `canOpenApp`; M3 ships FamilyControls authorization plus the `FamilyActivityPicker` view (counts only — name resolution lands in M4 via a `DeviceActivityReport` extension).
+Expo native module (`@amehmeto/expo-list-installed-apps`) that lists installed apps. Cross-platform (Android + iOS); web unsupported. Uses Expo's module system to bridge TypeScript to native Kotlin and Swift. On iOS, `listInstalledApps()` returns `[]` — Apple provides no public API to enumerate installed apps. M2 ships URL-scheme probing via `canOpenApp`; M2.5 adds `DEFAULT_IOS_APP_CATALOG` (~30 popular apps) plus a `useDefaultCatalog` plugin opt-in; M3 ships FamilyControls authorization plus the `FamilyActivityPicker` view (counts only — name resolution lands in M4 via a `DeviceActivityReport` extension).
 
 ## Commands
 
