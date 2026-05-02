@@ -1,6 +1,7 @@
 // Import the native module. On web, it will be resolved to ExpoListInstalledApps.web.ts
 // and on native platforms to ExpoListInstalledApps.ts
 import {
+  AUTHORIZATION_STATUSES,
   AppType,
   AuthorizationStatus,
   InstalledApp,
@@ -17,6 +18,32 @@ export {
   UniqueBy,
 } from './ExpoListInstalledApps.types'
 
+function isInstalledApp(value: unknown): value is InstalledApp {
+  if (typeof value !== 'object' || value === null) return false
+  return (
+    'packageName' in value &&
+    typeof value.packageName === 'string' &&
+    'versionName' in value &&
+    typeof value.versionName === 'string' &&
+    'versionCode' in value &&
+    typeof value.versionCode === 'number' &&
+    'firstInstallTime' in value &&
+    typeof value.firstInstallTime === 'number' &&
+    'lastUpdateTime' in value &&
+    typeof value.lastUpdateTime === 'number' &&
+    'appName' in value &&
+    typeof value.appName === 'string' &&
+    'icon' in value &&
+    typeof value.icon === 'string' &&
+    'apkDir' in value &&
+    typeof value.apkDir === 'string' &&
+    'size' in value &&
+    typeof value.size === 'number' &&
+    'activityName' in value &&
+    typeof value.activityName === 'string'
+  )
+}
+
 export async function listInstalledApps(
   options: {
     type?: AppType
@@ -30,7 +57,7 @@ export async function listInstalledApps(
   if (!Array.isArray(apps)) {
     return []
   }
-  return apps
+  return apps.filter(isInstalledApp)
 }
 
 export async function canOpenApp(scheme: string): Promise<boolean> {
@@ -46,22 +73,9 @@ export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
   return await ExpoListInstalledAppsModule.getPlatformCapabilities()
 }
 
-// `satisfies Record<AuthorizationStatus, true>` makes the compiler enforce
-// that every variant of AuthorizationStatus is listed below — adding a new
-// variant without updating this object is a type error.
-const AUTHORIZATION_STATUSES = {
-  approved: true,
-  denied: true,
-  notDetermined: true,
-  unavailable: true,
-  unknown: true,
-} as const satisfies Record<AuthorizationStatus, true>
-
 function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {
-  return (
-    typeof value === 'string' &&
-    Object.prototype.hasOwnProperty.call(AUTHORIZATION_STATUSES, value)
-  )
+  if (typeof value !== 'string') return false
+  return AUTHORIZATION_STATUSES.some((status) => status === value)
 }
 
 /**

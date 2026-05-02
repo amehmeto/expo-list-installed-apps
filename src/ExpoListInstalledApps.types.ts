@@ -59,8 +59,10 @@ export type PlatformCapabilities = {
 }
 
 /**
- * Status of the iOS FamilyControls authorization. Returned by
- * `getFamilyControlsAuthorizationStatus()`.
+ * All possible iOS FamilyControls authorization statuses. Single source of
+ * truth: the `AuthorizationStatus` type below is derived from this tuple, and
+ * the runtime validity check in `index.ts` iterates this tuple — adding or
+ * removing a variant updates both directions automatically.
  *
  * - `approved`: user granted Screen Time access.
  * - `denied`: user denied Screen Time access.
@@ -70,9 +72,12 @@ export type PlatformCapabilities = {
  * - `unknown`: an authorization status was returned that this version of the
  *   module does not recognize.
  */
-export type AuthorizationStatus =
-  | 'approved'
-  | 'denied'
-  | 'notDetermined'
-  | 'unavailable'
-  | 'unknown'
+export const AUTHORIZATION_STATUSES = [
+  'approved',
+  'denied',
+  'notDetermined',
+  'unavailable',
+  'unknown',
+] as const
+
+export type AuthorizationStatus = (typeof AUTHORIZATION_STATUSES)[number]
