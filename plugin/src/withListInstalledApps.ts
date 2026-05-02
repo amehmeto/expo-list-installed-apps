@@ -4,10 +4,17 @@ import {
   withInfoPlist,
 } from '@expo/config-plugins'
 
+import { DEFAULT_IOS_APP_SCHEMES } from './defaultCatalogSchemes'
 import withDeviceActivityExtension from './withDeviceActivityExtension'
 
 export type ListInstalledAppsPluginOptions = {
   urlSchemes?: string[]
+  /**
+   * When `true`, merges the bundled `DEFAULT_IOS_APP_CATALOG` schemes into
+   * `LSApplicationQueriesSchemes`. Defaults to `false` to keep behavior
+   * identical for consumers upgrading from 0.2.x.
+   */
+  useDefaultCatalog?: boolean
   ios?: {
     familyControls?: boolean
     appGroups?: string[]
@@ -75,12 +82,15 @@ const withQueriesSchemes: ConfigPlugin<{ urlSchemes: string[] }> = (
 
 const withListInstalledApps: ConfigPlugin<ListInstalledAppsPluginOptions> = (
   config,
-  { urlSchemes = [], ios = {} } = {},
+  { urlSchemes = [], useDefaultCatalog = false, ios = {} } = {},
 ) => {
   let next = config
 
-  if (urlSchemes.length > 0) {
-    next = withQueriesSchemes(next, { urlSchemes })
+  const baseSchemes = useDefaultCatalog ? [...DEFAULT_IOS_APP_SCHEMES] : []
+  const mergedSchemes = [...baseSchemes, ...urlSchemes]
+
+  if (mergedSchemes.length > 0) {
+    next = withQueriesSchemes(next, { urlSchemes: mergedSchemes })
   }
 
   if (ios.familyControls === true) {

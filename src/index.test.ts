@@ -5,6 +5,8 @@ import {
 } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 import {
+  DEFAULT_IOS_APP_CATALOG,
+  DEFAULT_IOS_APP_SCHEMES,
   canOpenApp,
   getFamilyControlsAuthorizationStatus,
   getPlatformCapabilities,
@@ -394,6 +396,42 @@ describe('getFamilyControlsAuthorizationStatus', () => {
       'gibberish',
     )
     expect(getFamilyControlsAuthorizationStatus()).toBe('unknown')
+  })
+})
+
+describe('DEFAULT_IOS_APP_CATALOG', () => {
+  it('is a non-empty array', () => {
+    expect(Array.isArray(DEFAULT_IOS_APP_CATALOG)).toBe(true)
+    expect(DEFAULT_IOS_APP_CATALOG.length).toBeGreaterThan(0)
+  })
+
+  it('has fully populated entries', () => {
+    for (const app of DEFAULT_IOS_APP_CATALOG) {
+      expect(app.appName.length).toBeGreaterThan(0)
+      expect(app.scheme.length).toBeGreaterThan(0)
+      expect(app.bundleId.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('uses bare lowercase schemes with no "://"', () => {
+    for (const app of DEFAULT_IOS_APP_CATALOG) {
+      expect(app.scheme).toBe(app.scheme.toLowerCase())
+      expect(app.scheme).not.toContain('://')
+    }
+  })
+
+  it('has unique schemes', () => {
+    const schemes = DEFAULT_IOS_APP_CATALOG.map((a) => a.scheme)
+    expect(new Set(schemes).size).toBe(schemes.length)
+  })
+
+  it('has unique bundleIds', () => {
+    const ids = DEFAULT_IOS_APP_CATALOG.map((a) => a.bundleId)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('stays under the iOS LSApplicationQueriesSchemes limit', () => {
+    expect(DEFAULT_IOS_APP_SCHEMES.length).toBeLessThanOrEqual(50)
   })
 })
 

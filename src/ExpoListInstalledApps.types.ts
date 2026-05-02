@@ -81,3 +81,25 @@ export const AUTHORIZATION_STATUSES = [
 ] as const
 
 export type AuthorizationStatus = (typeof AUTHORIZATION_STATUSES)[number]
+
+/**
+ * A known iOS app entry suitable for use with `canOpenApp(scheme)`.
+ *
+ * Pair the bundled `DEFAULT_IOS_APP_CATALOG` with the config plugin's
+ * `useDefaultCatalog: true` option to populate `LSApplicationQueriesSchemes`,
+ * then call `canOpenApp(scheme)` per entry to detect installs.
+ *
+ * Icons are deliberately omitted — consumers supply their own assets to keep
+ * the module bundle small and to avoid bundling third-party brand assets.
+ */
+export type IosKnownApp = {
+  appName: string
+  /** Bare URL scheme (no `://`), e.g. `'instagram'`. */
+  scheme: string
+  /**
+   * Apple's bundle id for the app, e.g. `'com.burbn.instagram'`. Treated as a
+   * stable downstream identifier — never rename existing entries; add new ones
+   * instead so consumers persisting on this value don't lose their references.
+   */
+  bundleId: string
+}

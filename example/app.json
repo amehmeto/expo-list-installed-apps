@@ -35,6 +35,7 @@
       [
         "../app.plugin.js",
         {
+          "useDefaultCatalog": true,
           "urlSchemes": ["maps", "music", "messages", "facetime", "mailto"],
           "ios": {
             "familyControls": true,

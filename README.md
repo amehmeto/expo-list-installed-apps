@@ -46,6 +46,7 @@ async function getApps() {
 iOS cannot enumerate every installed app — Apple has no public API for that, by design. iOS support therefore takes a different shape than Android:
 
 - **M2** — `canOpenApp(scheme)` to check if a known app is installed via URL scheme (Android via `PackageManager`, iOS via `UIApplication.canOpenURL`).
+- **M2.5** — `DEFAULT_IOS_APP_CATALOG` curates ~30 popular apps (`appName` + `scheme` + `bundleId`); opt in via the plugin's `useDefaultCatalog: true` to auto-declare every catalog scheme in `LSApplicationQueriesSchemes`.
 - **M3** — `FamilyActivityPicker` view component for user-driven selection plus app shielding via `ManagedSettings`.
 - **M4** — Extension-based name resolution: a `DeviceActivityReportExtension` (auto-injected by the config plugin) resolves opaque picker tokens into display names, surfaced as `getResolvedApps()`. Icon and version resolution remain out of scope (extension memory ceiling is 5 MB).
 
@@ -100,6 +101,41 @@ type InstalledApp = {
   activityName: string // The launcher activity class name
 }
 ```
+
+### iOS default app catalog (M2.5)
+
+Calling `canOpenApp(scheme)` on iOS only works if the scheme is pre-declared in `LSApplicationQueriesSchemes`. The bundled catalog ships ~30 popular apps so consumers don't have to hand-roll their own starter list.
+
+Opt in via the config plugin — schemes get merged into `LSApplicationQueriesSchemes` automatically (deduped case-insensitively against any `urlSchemes` you also pass):
+
+```jsonc
+{
+  "expo": {
+    "plugins": [["expo-list-installed-apps", { "useDefaultCatalog": true }]]
+  }
+}
+```
+
+Then probe at runtime:
+
+```typescript
+import { canOpenApp, DEFAULT_IOS_APP_CATALOG } from 'expo-list-installed-apps'
+
+const installed = await Promise.all(
+  DEFAULT_IOS_APP_CATALOG.map(async (app) => ({
+    ...app,
+    isInstalled: await canOpenApp(app.scheme),
+  })),
+)
+const onlyInstalled = installed.filter((app) => app.isInstalled)
+```
+
+Notes:
+
+- Catalog ships **metadata only** — no icons (avoids brand-asset licensing and bundle bloat). Supply your own icons.
+- `bundleId` is treated as a stable downstream identifier — entries are never renamed once published; new entries are appended instead.
+- Schemes drift over time as vendors rebrand. The catalog is re-audited periodically; see the `Last audited` line in `src/iosAppCatalog.ts`.
+- The plugin opt-in stays `false` by default to keep behavior identical for 0.2.x consumers upgrading.
 
 ### iOS FamilyControls (Screen Time API)
 

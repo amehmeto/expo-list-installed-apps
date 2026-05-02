@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Expo native module (`@amehmeto/expo-list-installed-apps`) that lists installed apps. Cross-platform (Android + iOS); web unsupported. Uses Expo's module system to bridge TypeScript to native Kotlin and Swift. On iOS, `listInstalledApps()` returns `[]` — Apple provides no public API to enumerate installed apps. M2 ships URL-scheme probing via `canOpenApp`; M3 ships FamilyControls authorization plus the `FamilyActivityPicker` view (counts only); M4 ships a `DeviceActivityReportExtension` (auto-injected by the config plugin) that resolves picker tokens to display names, surfaced via `getResolvedApps()`.
+Expo native module (`@amehmeto/expo-list-installed-apps`) that lists installed apps. Cross-platform (Android + iOS); web unsupported. Uses Expo's module system to bridge TypeScript to native Kotlin and Swift. On iOS, `listInstalledApps()` returns `[]` — Apple provides no public API to enumerate installed apps. M2 ships URL-scheme probing via `canOpenApp`; M2.5 adds `DEFAULT_IOS_APP_CATALOG` (~30 popular apps) plus a `useDefaultCatalog` plugin opt-in; M3 ships FamilyControls authorization plus the `FamilyActivityPicker` view (counts only); M4 ships a `DeviceActivityReportExtension` (auto-injected by the config plugin) that resolves picker tokens to display names, surfaced via `getResolvedApps()`.
 
 ## Commands
 
@@ -43,9 +43,10 @@ cd .. && npx expo run:ios
 
 **TypeScript layer** (`src/`):
 
-- `index.ts` — Public API: `listInstalledApps(options?)` returns `Promise<InstalledApp[]>`. Validates native response and applies defaults (`AppType.ALL`, `UniqueBy.PACKAGE`).
+- `index.ts` — Public API: `listInstalledApps(options?)` returns `Promise<InstalledApp[]>`. Validates native response and applies defaults (`AppType.ALL`, `UniqueBy.PACKAGE`). Also exports `canOpenApp`, `getPlatformCapabilities`, `getResolvedApps`, `getResolvedAppsError`, `requestFamilyControlsAuthorization`, `getFamilyControlsAuthorizationStatus`, plus the M2.5 catalog re-exports.
 - `ExpoListInstalledAppsModule.ts` — Native bridge via `requireNativeModule('ExpoListInstalledApps')` from expo-modules-core.
-- `ExpoListInstalledApps.types.ts` — Type definitions: `InstalledApp`, `AppType` enum (user/system/all), `UniqueBy` enum (none/package).
+- `ExpoListInstalledApps.types.ts` — Type definitions: `InstalledApp`, `AppType` enum (user/system/all), `UniqueBy` enum (none/package), `IosKnownApp`, `PlatformCapabilities`, `AuthorizationStatus`.
+- `iosAppCatalog.ts` — Curated `DEFAULT_IOS_APP_CATALOG` (~30 popular iOS apps × `{ appName, scheme, bundleId }`) plus the derived `DEFAULT_IOS_APP_SCHEMES` array. Source of truth — keep `Last audited` line in sync.
 
 **Native Android layer** (`android/src/main/java/expo/modules/listinstalledapps/`):
 
@@ -54,9 +55,9 @@ cd .. && npx expo run:ios
 
 **Native iOS layer** (`ios/`):
 
-- `ExpoListInstalledAppsModule.swift` — Swift module extending `Module` from `ExpoModulesCore`. `listInstalledApps(type, uniqueBy)` returns `[]` (Apple does not expose enumeration). Implements `canOpenApp(scheme)`, `getPlatformCapabilities()`, `requestFamilyControlsAuthorization()`, `getFamilyControlsAuthorizationStatus()`, `getResolvedApps()` (reads the App Group `UserDefaults` written by the report extension), and registers the `FamilyActivityPicker` SwiftUI view.
+- `ExpoListInstalledAppsModule.swift` — Swift module extending `Module` from `ExpoModulesCore`. `listInstalledApps(type, uniqueBy)` returns `[]` (Apple does not expose enumeration). Implements `canOpenApp(scheme)`, `getPlatformCapabilities()`, `requestFamilyControlsAuthorization()`, `getFamilyControlsAuthorizationStatus()`, `getResolvedApps()` (reads the App Group `UserDefaults` written by the report extension), `getResolvedAppsError()` (reads the most recent error string the extension stashed there), and registers the `FamilyActivityPicker` SwiftUI view.
 - `FamilyActivityPicker.swift` — SwiftUI view component wrapping Apple's `FamilyActivityPicker`. Emits `onSelectionCountsChange` with `applicationCount` / `categoryCount` / `webDomainCount`, and persists the encoded selection to App Group `UserDefaults` so the report extension can resolve it. Compile-time gated via `#if canImport(FamilyControls)` and runtime-gated via `#available(iOS 16.0, *)`.
-- `AppGroupStore.swift` — Reads the App Group identifier from `Info.plist` (key `EXListInstalledAppsAppGroup`, injected by the config plugin) and exposes the shared `UserDefaults` plus the picker-selection persistence helper.
+- `AppGroupStore.swift` — Reads the App Group identifier from `Info.plist` (key `EXListInstalledAppsAppGroup`, injected by the config plugin) and exposes the shared `UserDefaults` plus storage-key constants. Also defines `AppGroupSelectionStore.persist(_:)` which the picker calls on every selection change to write the encoded `FamilyActivitySelection` back to the App Group for the report extension to read.
 - `ExpoListInstalledApps.podspec` — CocoaPods spec; depends on `ExpoModulesCore`, iOS 15.1, Swift 5.9. Reads version/license/etc. from `package.json`.
 
 **iOS extension** (`ios/DeviceActivityReportExtension/`, generated by the config plugin during `expo prebuild`):
@@ -66,9 +67,10 @@ cd .. && npx expo run:ios
 
 **Config plugin** (`plugin/src/`):
 
-- `withListInstalledApps.ts` — main plugin: chains `LSApplicationQueriesSchemes`, FamilyControls entitlement, App Groups entitlement + `EXListInstalledAppsAppGroup` Info.plist key, and the extension target injection.
+- `withListInstalledApps.ts` — main plugin: chains `LSApplicationQueriesSchemes` (optionally seeded with the M2.5 catalog when `useDefaultCatalog: true`), FamilyControls entitlement, App Groups entitlement + `EXListInstalledAppsAppGroup` Info.plist key, and the extension target injection.
 - `withDeviceActivityExtension.ts` — uses `withDangerousMod` to write the extension source files into `ios/DeviceActivityReportExtension/` and `withXcodeProject` to register the extension target, build phases, embed phase, and code-signing settings on the Xcode project. Idempotent (early-returns if the target already exists).
 - `deviceActivityTemplates.ts` — inline string templates for the extension Swift sources, `Info.plist`, and entitlements file.
+- `defaultCatalogSchemes.ts` — `DEFAULT_IOS_APP_SCHEMES` mirror used by `useDefaultCatalog`. Duplicated here because the plugin's `rootDir` is `plugin/src` and can't import from `src/`. Drift is caught by the sync test in `__tests__/withListInstalledApps.test.ts`.
 
 **Module registration**: `expo-module.config.json` registers both the Android (`expo.modules.listinstalledapps.ExpoListInstalledAppsModule`) and iOS (`ExpoListInstalledAppsModule`) modules for Expo autolinking.
 

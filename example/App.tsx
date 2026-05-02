@@ -23,6 +23,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -33,7 +34,17 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context'
 
-const PROBE_SCHEMES = ['maps', 'music', 'messages', 'facetime', 'mailto']
+// Dedupe against the catalog so future catalog additions can't double up.
+const PROBE_SCHEMES = Array.from(
+  new Set([
+    ...ExpoListInstalledApps.DEFAULT_IOS_APP_SCHEMES,
+    'maps',
+    'music',
+    'messages',
+    'facetime',
+    'mailto',
+  ]),
+)
 const FILTER_ACTIVE = 'blue'
 const FILTER_INACTIVE = 'grey'
 const APP_TYPE_FILTER_LABEL: Record<AppType, string> = {
@@ -364,10 +375,13 @@ function AppContent() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {isIOS && (
-        <>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          showsVerticalScrollIndicator
+        >
           <DetectionPanel />
           <FamilyControlsPanel />
-        </>
+        </ScrollView>
       )}
       {isAndroid && (
         <>

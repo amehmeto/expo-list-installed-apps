@@ -5,6 +5,8 @@ import type {
 } from '@expo/config-plugins'
 import type { ExpoConfig } from '@expo/config-types'
 
+import { DEFAULT_IOS_APP_CATALOG } from '../../../src/iosAppCatalog'
+import { DEFAULT_IOS_APP_SCHEMES } from '../defaultCatalogSchemes'
 import withListInstalledApps, {
   ListInstalledAppsPluginOptions,
 } from '../withListInstalledApps'
@@ -101,6 +103,67 @@ describe('withListInstalledApps', () => {
         'maps',
         'instagram',
       ])
+    })
+  })
+
+  describe('useDefaultCatalog', () => {
+    it('does nothing when omitted (preserves 0.2.x behavior)', () => {
+      const result = runPlugin()
+      expect(result.mods?.ios?.infoPlist).toBeUndefined()
+    })
+
+    it('does nothing when explicitly false', () => {
+      const result = runPlugin({ useDefaultCatalog: false })
+      expect(result.mods?.ios?.infoPlist).toBeUndefined()
+    })
+
+    it('writes the full catalog into LSApplicationQueriesSchemes when true', async () => {
+      const result = runPlugin({ useDefaultCatalog: true })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      const written = infoPlist?.LSApplicationQueriesSchemes as string[]
+      for (const scheme of DEFAULT_IOS_APP_SCHEMES) {
+        expect(written).toContain(scheme)
+      }
+      expect(written.length).toBe(DEFAULT_IOS_APP_SCHEMES.length)
+    })
+
+    it('merges catalog schemes with consumer-supplied urlSchemes (catalog first)', async () => {
+      const result = runPlugin({
+        useDefaultCatalog: true,
+        urlSchemes: ['maps', 'mailto'],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      const written = infoPlist?.LSApplicationQueriesSchemes as string[]
+      // Catalog schemes come first, then consumer schemes — both are present.
+      expect(written.slice(0, DEFAULT_IOS_APP_SCHEMES.length)).toEqual([
+        ...DEFAULT_IOS_APP_SCHEMES,
+      ])
+      expect(written).toContain('maps')
+      expect(written).toContain('mailto')
+    })
+
+    it('dedupes case-insensitively across the catalog/consumer overlap', async () => {
+      const result = runPlugin({
+        useDefaultCatalog: true,
+        // Same as catalog entries, with different casing — should not duplicate.
+        urlSchemes: ['Instagram', 'WHATSAPP'],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      const written = infoPlist?.LSApplicationQueriesSchemes as string[]
+      expect(written.length).toBe(DEFAULT_IOS_APP_SCHEMES.length)
+      const occurrences = (s: string) =>
+        written.filter((entry) => entry === s).length
+      expect(occurrences('instagram')).toBe(1)
+      expect(occurrences('whatsapp')).toBe(1)
+    })
+
+    it('plugin scheme list stays in sync with the source-of-truth catalog', () => {
+      // The plugin can't import from src/ (rootDir constraint), so the schemes
+      // are mirrored into plugin/src/defaultCatalogSchemes.ts. This test fails
+      // loudly if either side drifts.
+      expect([...DEFAULT_IOS_APP_SCHEMES]).toEqual(
+        DEFAULT_IOS_APP_CATALOG.map((app) => app.scheme),
+      )
     })
   })
 
