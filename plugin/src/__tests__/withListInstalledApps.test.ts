@@ -1,48 +1,49 @@
+import type {
+  ExportedConfig,
+  ExportedConfigWithProps,
+  Mod,
+} from '@expo/config-plugins'
+import type { ExpoConfig } from '@expo/config-types'
+
 import { DEFAULT_IOS_APP_CATALOG } from '../../../src/iosAppCatalog'
 import { DEFAULT_IOS_APP_SCHEMES } from '../defaultCatalogSchemes'
 import withListInstalledApps, {
   ListInstalledAppsPluginOptions,
 } from '../withListInstalledApps'
 
-type Mod = (input: {
-  modRequest: { nextMod: (config: unknown) => unknown }
-  modResults: Record<string, unknown>
-  [key: string]: unknown
-}) =>
-  | Promise<{ modResults: Record<string, unknown> }>
-  | {
-      modResults: Record<string, unknown>
-    }
+const baseConfig = (): ExpoConfig => ({
+  name: 'test',
+  slug: 'test',
+})
 
-type ConfigWithMods = {
-  mods?: {
-    ios?: {
-      infoPlist?: Mod
-      entitlements?: Mod
-      dangerous?: Mod
-      xcodeproj?: Mod
-    }
-  }
-}
-
-const baseConfig = (): ConfigWithMods => ({})
-
+// `withInfoPlist` / `withEntitlementsPlist` add `mods` at runtime, so the
+// returned object is structurally an `ExportedConfig` even though
+// `ConfigPlugin` declares its return as the narrower `ExpoConfig`.
+// `ExportedConfig` only adds `mods?` (optional), so an `ExpoConfig` satisfies
+// it structurally — TS accepts the widening without an assertion.
 const runPlugin = (
-  options: ListInstalledAppsPluginOptions = {},
-): ConfigWithMods =>
-  withListInstalledApps(baseConfig() as never, options) as ConfigWithMods
+  options?: ListInstalledAppsPluginOptions,
+): ExportedConfig => withListInstalledApps(baseConfig(), options)
 
-const identityNext = <T>(c: T): T => c
-
-const runMod = async (
-  mod: Mod | undefined,
-  initial: Record<string, unknown> = {},
-): Promise<Record<string, unknown> | null> => {
+async function runMod<T>(
+  mod: Mod<T> | undefined,
+  initial: T,
+): Promise<T | null> {
   if (!mod) return null
-  const result = await mod({
-    modRequest: { nextMod: identityNext },
-    modResults: { ...initial },
-  })
+  const config: ExportedConfigWithProps<T> = {
+    name: 'test',
+    slug: 'test',
+    modResults: initial,
+    modRequest: {
+      projectRoot: '/',
+      platformProjectRoot: '/',
+      modName: 'test',
+      platform: 'ios',
+      introspect: false,
+    },
+    modRawConfig: baseConfig(),
+  }
+  const result = await mod(config)
   return result.modResults
 }
 
@@ -55,10 +56,8 @@ describe('withListInstalledApps', () => {
 
   describe('urlSchemes', () => {
     it('writes LSApplicationQueriesSchemes when schemes are provided', async () => {
-      const result = runPlugin({
-        urlSchemes: ['instagram', 'whatsapp'],
-      })
-      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
+      const result = runPlugin({ urlSchemes: ['instagram', 'whatsapp'] })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
       expect(infoPlist?.LSApplicationQueriesSchemes).toEqual([
         'instagram',
         'whatsapp',
@@ -67,10 +66,8 @@ describe('withListInstalledApps', () => {
     })
 
     it('merges with existing schemes and deduplicates', async () => {
-      const result = runPlugin({
-        urlSchemes: ['whatsapp', 'tiktok'],
-      })
-      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod, {
+      const result = runPlugin({ urlSchemes: ['whatsapp', 'tiktok'] })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {
         LSApplicationQueriesSchemes: ['instagram', 'whatsapp'],
       })
       expect(infoPlist?.LSApplicationQueriesSchemes).toEqual([
@@ -83,10 +80,8 @@ describe('withListInstalledApps', () => {
     it('warns when scheme count exceeds the iOS limit', async () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
       const tooMany = Array.from({ length: 51 }, (_, i) => `app${i}`)
-      const result = runPlugin({
-        urlSchemes: tooMany,
-      })
-      await runMod(result.mods?.ios?.infoPlist as Mod)
+      const result = runPlugin({ urlSchemes: tooMany })
+      await runMod(result.mods?.ios?.infoPlist, {})
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining('LSApplicationQueriesSchemes has 51 entries'),
       )
@@ -94,18 +89,14 @@ describe('withListInstalledApps', () => {
     })
 
     it('dedupes case-insensitively', async () => {
-      const result = runPlugin({
-        urlSchemes: ['Maps', 'maps', 'MAPS', 'music'],
-      })
-      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
+      const result = runPlugin({ urlSchemes: ['Maps', 'maps', 'MAPS', 'music'] })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
       expect(infoPlist?.LSApplicationQueriesSchemes).toEqual(['maps', 'music'])
     })
 
     it('lowercases existing schemes during merge dedupe', async () => {
-      const result = runPlugin({
-        urlSchemes: ['maps'],
-      })
-      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod, {
+      const result = runPlugin({ urlSchemes: ['maps'] })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {
         LSApplicationQueriesSchemes: ['Maps', 'instagram'],
       })
       expect(infoPlist?.LSApplicationQueriesSchemes).toEqual([
@@ -115,26 +106,81 @@ describe('withListInstalledApps', () => {
     })
   })
 
+  describe('useDefaultCatalog', () => {
+    it('does nothing when omitted (preserves 0.2.x behavior)', () => {
+      const result = runPlugin()
+      expect(result.mods?.ios?.infoPlist).toBeUndefined()
+    })
+
+    it('does nothing when explicitly false', () => {
+      const result = runPlugin({ useDefaultCatalog: false })
+      expect(result.mods?.ios?.infoPlist).toBeUndefined()
+    })
+
+    it('writes the full catalog into LSApplicationQueriesSchemes when true', async () => {
+      const result = runPlugin({ useDefaultCatalog: true })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      const written = infoPlist?.LSApplicationQueriesSchemes as string[]
+      for (const scheme of DEFAULT_IOS_APP_SCHEMES) {
+        expect(written).toContain(scheme)
+      }
+      expect(written.length).toBe(DEFAULT_IOS_APP_SCHEMES.length)
+    })
+
+    it('merges catalog schemes with consumer-supplied urlSchemes (catalog first)', async () => {
+      const result = runPlugin({
+        useDefaultCatalog: true,
+        urlSchemes: ['maps', 'mailto'],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      const written = infoPlist?.LSApplicationQueriesSchemes as string[]
+      // Catalog schemes come first, then consumer schemes — both are present.
+      expect(written.slice(0, DEFAULT_IOS_APP_SCHEMES.length)).toEqual([
+        ...DEFAULT_IOS_APP_SCHEMES,
+      ])
+      expect(written).toContain('maps')
+      expect(written).toContain('mailto')
+    })
+
+    it('dedupes case-insensitively across the catalog/consumer overlap', async () => {
+      const result = runPlugin({
+        useDefaultCatalog: true,
+        // Same as catalog entries, with different casing — should not duplicate.
+        urlSchemes: ['Instagram', 'WHATSAPP'],
+      })
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      const written = infoPlist?.LSApplicationQueriesSchemes as string[]
+      expect(written.length).toBe(DEFAULT_IOS_APP_SCHEMES.length)
+      const occurrences = (s: string) =>
+        written.filter((entry) => entry === s).length
+      expect(occurrences('instagram')).toBe(1)
+      expect(occurrences('whatsapp')).toBe(1)
+    })
+
+    it('plugin scheme list stays in sync with the source-of-truth catalog', () => {
+      // The plugin can't import from src/ (rootDir constraint), so the schemes
+      // are mirrored into plugin/src/defaultCatalogSchemes.ts. This test fails
+      // loudly if either side drifts.
+      expect([...DEFAULT_IOS_APP_SCHEMES]).toEqual(
+        DEFAULT_IOS_APP_CATALOG.map((app) => app.scheme),
+      )
+    })
+  })
+
   describe('ios.familyControls', () => {
     it('does not add the entitlement when familyControls is omitted', () => {
-      const result = runPlugin({
-        urlSchemes: ['instagram'],
-      })
+      const result = runPlugin({ urlSchemes: ['instagram'] })
       expect(result.mods?.ios?.entitlements).toBeUndefined()
     })
 
     it('does not add the entitlement when familyControls is false', () => {
-      const result = runPlugin({
-        ios: { familyControls: false },
-      })
+      const result = runPlugin({ ios: { familyControls: false } })
       expect(result.mods?.ios?.entitlements).toBeUndefined()
     })
 
     it('adds com.apple.developer.family-controls when enabled', async () => {
-      const result = runPlugin({
-        ios: { familyControls: true },
-      })
-      const entitlements = await runMod(result.mods?.ios?.entitlements as Mod)
+      const result = runPlugin({ ios: { familyControls: true } })
+      const entitlements = await runMod(result.mods?.ios?.entitlements, {})
       expect(entitlements?.['com.apple.developer.family-controls']).toBe(true)
     })
 
@@ -143,17 +189,15 @@ describe('withListInstalledApps', () => {
         urlSchemes: ['instagram'],
         ios: { familyControls: true },
       })
-      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
-      const entitlements = await runMod(result.mods?.ios?.entitlements as Mod)
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      const entitlements = await runMod(result.mods?.ios?.entitlements, {})
       expect(infoPlist?.LSApplicationQueriesSchemes).toEqual(['instagram'])
       expect(entitlements?.['com.apple.developer.family-controls']).toBe(true)
     })
 
     it('coexists with pre-existing entitlement keys', async () => {
-      const result = runPlugin({
-        ios: { familyControls: true },
-      })
-      const entitlements = await runMod(result.mods?.ios?.entitlements as Mod, {
+      const result = runPlugin({ ios: { familyControls: true } })
+      const entitlements = await runMod(result.mods?.ios?.entitlements, {
         'aps-environment': 'development',
       })
       expect(entitlements?.['aps-environment']).toBe('development')
@@ -166,8 +210,8 @@ describe('withListInstalledApps', () => {
       const result = runPlugin({
         ios: { appGroups: ['group.expo.modules.listinstalledapps.example'] },
       })
-      const entitlements = await runMod(result.mods?.ios?.entitlements as Mod)
-      const infoPlist = await runMod(result.mods?.ios?.infoPlist as Mod)
+      const entitlements = await runMod(result.mods?.ios?.entitlements, {})
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
       expect(entitlements?.['com.apple.security.application-groups']).toEqual([
         'group.expo.modules.listinstalledapps.example',
       ])
@@ -180,7 +224,7 @@ describe('withListInstalledApps', () => {
       const result = runPlugin({
         ios: { appGroups: ['group.shared', 'group.new'] },
       })
-      const entitlements = await runMod(result.mods?.ios?.entitlements as Mod, {
+      const entitlements = await runMod(result.mods?.ios?.entitlements, {
         'com.apple.security.application-groups': ['group.shared'],
       })
       expect(entitlements?.['com.apple.security.application-groups']).toEqual([

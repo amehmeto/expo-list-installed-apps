@@ -15,6 +15,15 @@ if ! git fetch origin master --quiet 2>/dev/null; then
   exit 0
 fi
 
+# Check if branch is behind master. GitHub's "branch out of date" rule fires
+# when origin/master is not an ancestor of HEAD; this catches the same case
+# locally so the push doesn't surprise reviewers on the PR page.
+commits_behind=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
+if [ "$commits_behind" -gt 0 ]; then
+  printf "❌ Branch is %s commit(s) behind master. Run: git merge origin/master\n" "$commits_behind"
+  exit 1
+fi
+
 # Use new git merge-tree syntax (Git 2.38+)
 # Exit code 0 = no conflicts, non-zero = conflicts
 if ! git merge-tree --write-tree HEAD origin/master >/dev/null 2>&1; then

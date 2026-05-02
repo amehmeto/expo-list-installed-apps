@@ -59,8 +59,10 @@ export type PlatformCapabilities = {
 }
 
 /**
- * Status of the iOS FamilyControls authorization. Returned by
- * `getFamilyControlsAuthorizationStatus()`.
+ * All possible iOS FamilyControls authorization statuses. Single source of
+ * truth: the `AuthorizationStatus` type below is derived from this tuple, and
+ * the runtime validity check in `index.ts` iterates this tuple — adding or
+ * removing a variant updates both directions automatically.
  *
  * - `approved`: user granted Screen Time access.
  * - `denied`: user denied Screen Time access.
@@ -70,12 +72,15 @@ export type PlatformCapabilities = {
  * - `unknown`: an authorization status was returned that this version of the
  *   module does not recognize.
  */
-export type AuthorizationStatus =
-  | 'approved'
-  | 'denied'
-  | 'notDetermined'
-  | 'unavailable'
-  | 'unknown'
+export const AUTHORIZATION_STATUSES = [
+  'approved',
+  'denied',
+  'notDetermined',
+  'unavailable',
+  'unknown',
+] as const
+
+export type AuthorizationStatus = (typeof AUTHORIZATION_STATUSES)[number]
 
 /**
  * A known iOS app entry suitable for use with `canOpenApp(scheme)`.
@@ -91,6 +96,10 @@ export type IosKnownApp = {
   appName: string
   /** Bare URL scheme (no `://`), e.g. `'instagram'`. */
   scheme: string
-  /** Stable synthetic identifier, e.g. `'com.burbn.instagram'`. */
+  /**
+   * Apple's bundle id for the app, e.g. `'com.burbn.instagram'`. Treated as a
+   * stable downstream identifier — never rename existing entries; add new ones
+   * instead so consumers persisting on this value don't lose their references.
+   */
   bundleId: string
 }

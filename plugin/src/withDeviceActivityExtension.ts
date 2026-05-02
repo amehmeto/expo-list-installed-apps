@@ -42,9 +42,14 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
       return cfg
     }
 
-    const mainBundleId =
+    // `getBuildProperty` returns the raw pbxproj string, which may include
+    // surrounding double quotes (e.g. `"com.foo.bar"`). Strip them before
+    // composing the extension bundle id so we don't end up with
+    // `"com.foo".DeviceActivityReportExtension`.
+    const rawBundleId =
       cfg.ios?.bundleIdentifier ??
       project.getBuildProperty('PRODUCT_BUNDLE_IDENTIFIER', 'Release')
+    const mainBundleId = stripQuotes(rawBundleId)
     const extensionBundleId = `${mainBundleId}.${EXTENSION_TARGET_NAME}`
 
     const sourceFiles = [
@@ -88,7 +93,8 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
       EXTENSION_TARGET_NAME,
       EXTENSION_TARGET_NAME,
     )
-    attachGroupToProjectRoot(project, pbxGroup.uuid)
+    const mainGroupUuid = project.getFirstProject().firstProject.mainGroup
+    project.addToPbxGroup(pbxGroup.uuid, mainGroupUuid)
 
     const configurations = project.pbxXCBuildConfigurationSection()
     Object.keys(configurations).forEach((key) => {
@@ -102,7 +108,10 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
         buildSettings.CODE_SIGN_STYLE = 'Automatic'
         buildSettings.INFOPLIST_FILE = `"${EXTENSION_TARGET_NAME}/Info.plist"`
         buildSettings.CODE_SIGN_ENTITLEMENTS = `"${EXTENSION_TARGET_NAME}/${EXTENSION_TARGET_NAME}.entitlements"`
-        buildSettings.PRODUCT_BUNDLE_IDENTIFIER = `"${extensionBundleId}"`
+        // Bundle ids contain no whitespace, so write unquoted — matches how
+        // other Expo plugins emit PRODUCT_BUNDLE_IDENTIFIER and avoids
+        // round-tripping the quote-stripping above on subsequent prebuilds.
+        buildSettings.PRODUCT_BUNDLE_IDENTIFIER = extensionBundleId
         buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"'
         buildSettings.SKIP_INSTALL = 'YES'
         buildSettings.GENERATE_INFOPLIST_FILE = 'NO'
@@ -123,7 +132,7 @@ const extensionTargetExists = (project: {
   for (const key of Object.keys(targets)) {
     if (key.endsWith('_comment')) continue
     const target = targets[key] as { name?: string } | undefined
-    const name = target?.name?.replace(/"/g, '')
+    const name = stripQuotes(target?.name)
     if (name === EXTENSION_TARGET_NAME) {
       return true
     }
@@ -131,24 +140,8 @@ const extensionTargetExists = (project: {
   return false
 }
 
-const attachGroupToProjectRoot = (
-  project: {
-    hash: { project: { objects: Record<string, Record<string, unknown>> } }
-    addToPbxGroup: (childUuid: string, parentUuid: string) => void
-  },
-  childUuid: string,
-): void => {
-  const groups = project.hash.project.objects.PBXGroup ?? {}
-  for (const groupKey of Object.keys(groups)) {
-    if (groupKey.endsWith('_comment')) continue
-    const group = groups[groupKey] as
-      | { name?: string; path?: string }
-      | undefined
-    if (group && group.name === undefined && group.path === undefined) {
-      project.addToPbxGroup(childUuid, groupKey)
-      return
-    }
-  }
-}
+const stripQuotes = (value: string | undefined | null): string =>
+  (value ?? '').replace(/^"|"$/g, '')
 
 export default withDeviceActivityExtension
+export { stripQuotes }

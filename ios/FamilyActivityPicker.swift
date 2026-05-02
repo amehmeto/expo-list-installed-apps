@@ -38,8 +38,11 @@ private struct FamilyActivityPickerInner: View {
   @ObservedObject var props: FamilyActivityPickerProps
   @State private var selection = FamilyActivitySelection()
 
-  // TODO: when the iOS floor moves to 17, use FamilyActivityPicker(headerText:selection:)
-  // and drop the manual Text() wrapper.
+  // TODO: when the iOS floor moves to 17:
+  //   1. Use FamilyActivityPicker(headerText:selection:) and drop the manual
+  //      Text() wrapper.
+  //   2. Switch to the `onChange(of:initial:_:)` two-parameter closure form;
+  //      the single-parameter `onChange(of:_:)` form below is deprecated.
   var body: some View {
     VStack(spacing: 0) {
       if !props.headerTitle.isEmpty {
@@ -57,8 +60,10 @@ private struct FamilyActivityPickerInner: View {
           // Drop stale resolved data so getResolvedApps() doesn't return
           // names from the previous selection while the OS reschedules the
           // report extension for the new one.
-          AppGroupStore.defaults?.removeObject(forKey: AppGroupStore.resolvedAppsKey)
-          AppGroupSelectionStore.persist(newValue)
+          if let defaults = AppGroupStore.defaults {
+            defaults.removeObject(forKey: AppGroupStore.resolvedAppsKey)
+            AppGroupSelectionStore.persist(newValue)
+          }
         }
     }
   }

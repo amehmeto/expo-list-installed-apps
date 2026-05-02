@@ -22,11 +22,20 @@ const totalActivityReportTemplate = (
 ) => `import DeviceActivity
 import FamilyControls
 import Foundation
+import os.log
 import SwiftUI
 
 extension DeviceActivityReport.Context {
   static let totalActivity = Self("TotalActivity")
 }
+
+// Log to Console.app — filter by this subsystem (reverse-DNS per Apple's
+// convention) when debugging. Extensions can't print to the host process,
+// so this is the only way to surface failures from inside the extension.
+private let extensionLog = OSLog(
+  subsystem: "com.amehmeto.expo-list-installed-apps",
+  category: "DeviceActivityReportExtension"
+)
 
 struct TotalActivityReport: DeviceActivityReportScene {
   let context: DeviceActivityReport.Context = .totalActivity
@@ -48,6 +57,9 @@ enum TokenResolver {
   // The plugin re-renders this file on every prebuild, so it stays in sync.
   static let appGroup = "${appGroup}"
   static let storageKey = "resolvedApps"
+  // Mirror AppGroupStore.resolvedAppsErrorKey on the host side so
+  // getResolvedAppsError() can surface failures the extension wrote here.
+  static let errorKey = "resolvedAppsError"
 
   static func resolveAndPersist(from results: DeviceActivityResults<DeviceActivityData>) async {
     var resolved: [[String: String]] = []
@@ -72,11 +84,29 @@ enum TokenResolver {
       }
     }
 
-    guard let defaults = UserDefaults(suiteName: appGroup),
-          let data = try? JSONEncoder().encode(resolved) else {
+    guard let defaults = UserDefaults(suiteName: appGroup) else {
+      os_log(
+        "Failed to open shared UserDefaults for App Group %{public}@",
+        log: extensionLog,
+        type: .error,
+        appGroup
+      )
       return
     }
-    defaults.set(data, forKey: storageKey)
+
+    do {
+      let data = try JSONEncoder().encode(resolved)
+      defaults.set(data, forKey: storageKey)
+      defaults.removeObject(forKey: errorKey)
+    } catch {
+      os_log(
+        "Failed to encode resolved apps: %{public}@",
+        log: extensionLog,
+        type: .error,
+        String(describing: error)
+      )
+      defaults.set(String(describing: error), forKey: errorKey)
+    }
   }
 }
 `

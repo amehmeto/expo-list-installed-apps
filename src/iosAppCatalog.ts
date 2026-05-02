@@ -15,6 +15,9 @@ import { IosKnownApp } from './ExpoListInstalledApps.types'
  *
  * This list is curated, not exhaustive — consumers can pass extra entries via
  * the plugin's `urlSchemes` option.
+ *
+ * Schemes drift over time as vendors rebrand or rev their apps. Re-audit at
+ * least quarterly. Last audited: 2026-05-02.
  */
 export const DEFAULT_IOS_APP_CATALOG: readonly IosKnownApp[] = [
   // Social

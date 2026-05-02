@@ -6,6 +6,11 @@ import FamilyControls
 #endif
 
 public final class ExpoListInstalledAppsModule: Module {
+  // Apple's documented cap on LSApplicationQueriesSchemes. Mirrored at build
+  // time by `IOS_SCHEME_LIMIT` in plugin/src/withListInstalledApps.ts —
+  // keep both values in sync.
+  private static let urlSchemeLimit = 50
+
   public func definition() -> ModuleDefinition {
     Name("ExpoListInstalledApps")
 
@@ -29,7 +34,7 @@ public final class ExpoListInstalledAppsModule: Module {
         "platform": "ios",
         "canListInstalledApps": false,
         "canCheckUrlScheme": true,
-        "urlSchemeLimit": 50,
+        "urlSchemeLimit": Self.urlSchemeLimit,
         "requiresSchemeDeclaration": true,
         "requiresRuntimePermission": false,
         "familyControlsAvailable": Self.familyControlsAvailable,
@@ -66,6 +71,10 @@ public final class ExpoListInstalledAppsModule: Module {
           "activityName": "",
         ] as [String: Any]
       }
+    }
+
+    AsyncFunction("getResolvedAppsError") { () -> String? in
+      AppGroupStore.defaults?.string(forKey: AppGroupStore.resolvedAppsErrorKey)
     }
 
     Function("getFamilyControlsAuthorizationStatus") { () -> String in
