@@ -108,7 +108,10 @@ const withExtensionTarget: ConfigPlugin<Options> = (config) =>
         buildSettings.CODE_SIGN_STYLE = 'Automatic'
         buildSettings.INFOPLIST_FILE = `"${EXTENSION_TARGET_NAME}/Info.plist"`
         buildSettings.CODE_SIGN_ENTITLEMENTS = `"${EXTENSION_TARGET_NAME}/${EXTENSION_TARGET_NAME}.entitlements"`
-        buildSettings.PRODUCT_BUNDLE_IDENTIFIER = `"${extensionBundleId}"`
+        // Bundle ids contain no whitespace, so write unquoted — matches how
+        // other Expo plugins emit PRODUCT_BUNDLE_IDENTIFIER and avoids
+        // round-tripping the quote-stripping above on subsequent prebuilds.
+        buildSettings.PRODUCT_BUNDLE_IDENTIFIER = extensionBundleId
         buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"'
         buildSettings.SKIP_INSTALL = 'YES'
         buildSettings.GENERATE_INFOPLIST_FILE = 'NO'

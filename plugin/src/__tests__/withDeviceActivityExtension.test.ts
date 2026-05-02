@@ -2,33 +2,57 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 
+import type {
+  ExportedConfig,
+  ExportedConfigWithProps,
+  Mod,
+} from '@expo/config-plugins'
+import type { ExpoConfig } from '@expo/config-types'
+
 import withDeviceActivityExtension, {
   stripQuotes,
 } from '../withDeviceActivityExtension'
 import { EXTENSION_TARGET_NAME } from '../deviceActivityTemplates'
 
-type Mod = (input: {
-  modRequest: {
-    nextMod: (config: unknown) => unknown
-    platformProjectRoot: string
-  }
-  modResults: unknown
-  ios?: { bundleIdentifier?: string }
-  [key: string]: unknown
-}) => Promise<{ modResults: unknown }> | { modResults: unknown }
-
-type ConfigWithMods = {
-  ios?: { bundleIdentifier?: string }
-  mods?: {
-    ios?: {
-      dangerous?: Mod
-      xcodeproj?: Mod
-    }
-  }
-}
-
 const APP_GROUP = 'group.example.test'
-const identityNext = <T>(c: T): T => c
+
+const baseConfig = (
+  overrides: Partial<ExpoConfig> = {},
+): ExpoConfig => ({
+  name: 'test',
+  slug: 'test',
+  ...overrides,
+})
+
+// `withDangerousMod` / `withXcodeProject` add `mods` at runtime, so the
+// returned value is structurally `ExportedConfig` even though `ConfigPlugin`
+// declares the narrower `ExpoConfig`. `ExportedConfig` only adds an optional
+// `mods?` field, so an `ExpoConfig` satisfies it structurally.
+const runPlugin = (config: ExpoConfig = baseConfig()): ExportedConfig =>
+  withDeviceActivityExtension(config, { appGroup: APP_GROUP })
+
+async function runMod<T>(
+  mod: Mod<T> | undefined,
+  initial: T,
+  rawConfig: ExpoConfig = baseConfig(),
+  platformProjectRoot = '/',
+): Promise<T | null> {
+  if (!mod) return null
+  const config: ExportedConfigWithProps<T> = {
+    ...rawConfig,
+    modResults: initial,
+    modRequest: {
+      projectRoot: '/',
+      platformProjectRoot,
+      modName: 'test',
+      platform: 'ios',
+      introspect: false,
+    },
+    modRawConfig: rawConfig,
+  }
+  const result = await mod(config)
+  return result.modResults
+}
 
 describe('stripQuotes', () => {
   it('strips paired surrounding quotes', () => {
@@ -61,17 +85,8 @@ describe('withDeviceActivityExtension — file generation', () => {
   })
 
   it('writes the four extension files into ios/<TARGET>/', async () => {
-    const config = withDeviceActivityExtension(
-      {} as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-    const dangerous = config.mods?.ios?.dangerous as Mod
-    expect(dangerous).toBeDefined()
-
-    await dangerous({
-      modRequest: { nextMod: identityNext, platformProjectRoot: tmpDir },
-      modResults: {},
-    })
+    const result = runPlugin()
+    await runMod(result.mods?.ios?.dangerous, {}, baseConfig(), tmpDir)
 
     const targetDir = path.join(tmpDir, EXTENSION_TARGET_NAME)
     expect(fs.existsSync(targetDir)).toBe(true)
@@ -90,16 +105,8 @@ describe('withDeviceActivityExtension — file generation', () => {
   })
 
   it('bakes the App Group identifier into TotalActivityReport.swift', async () => {
-    const config = withDeviceActivityExtension(
-      {} as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-    const dangerous = config.mods?.ios?.dangerous as Mod
-
-    await dangerous({
-      modRequest: { nextMod: identityNext, platformProjectRoot: tmpDir },
-      modResults: {},
-    })
+    const result = runPlugin()
+    await runMod(result.mods?.ios?.dangerous, {}, baseConfig(), tmpDir)
 
     const swift = fs.readFileSync(
       path.join(tmpDir, EXTENSION_TARGET_NAME, 'TotalActivityReport.swift'),
@@ -130,7 +137,10 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
     const buildSettings: Record<string, string> = {
       PRODUCT_NAME: `"${EXTENSION_TARGET_NAME}"`,
     }
-    const configurations: Record<string, { buildSettings: typeof buildSettings }> = {
+    const configurations: Record<
+      string,
+      { buildSettings: typeof buildSettings }
+    > = {
       'config-uuid': { buildSettings },
     }
     return {
@@ -157,25 +167,20 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
   }
 
   const runXcodeMod = (
-    config: ConfigWithMods,
     project: FakeProject,
-  ): Promise<{ modResults: unknown }> | { modResults: unknown } => {
-    const xcodeproj = config.mods?.ios?.xcodeproj as Mod
-    return xcodeproj({
-      modRequest: { nextMod: identityNext, platformProjectRoot: '' },
-      modResults: project,
-      ios: config.ios,
-    })
-  }
+    config: ExpoConfig = baseConfig({
+      ios: { bundleIdentifier: 'com.example.app' },
+    }),
+  ): Promise<FakeProject | null> | FakeProject | null =>
+    runMod(
+      runPlugin(config).mods?.ios?.xcodeproj as Mod<FakeProject> | undefined,
+      project,
+      config,
+    )
 
   it('creates the extension target with bundle id derived from cfg.ios.bundleIdentifier', async () => {
     const project = buildProjectMock()
-    const config = withDeviceActivityExtension(
-      { ios: { bundleIdentifier: 'com.example.app' } } as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    await runXcodeMod(project)
 
     expect(project.addTarget).toHaveBeenCalledWith(
       EXTENSION_TARGET_NAME,
@@ -186,15 +191,8 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
   })
 
   it('strips surrounding quotes from getBuildProperty fallback', async () => {
-    const project = buildProjectMock({
-      bundleIdReturn: '"com.example.quoted"',
-    })
-    const config = withDeviceActivityExtension(
-      {} as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    const project = buildProjectMock({ bundleIdReturn: '"com.example.quoted"' })
+    await runXcodeMod(project, baseConfig())
 
     expect(project.addTarget).toHaveBeenCalledWith(
       EXTENSION_TARGET_NAME,
@@ -206,12 +204,7 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
 
   it('attaches the new PBXGroup to the project main group via getFirstProject', async () => {
     const project = buildProjectMock()
-    const config = withDeviceActivityExtension(
-      { ios: { bundleIdentifier: 'com.example.app' } } as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    await runXcodeMod(project)
 
     expect(project.getFirstProject).toHaveBeenCalled()
     expect(project.addToPbxGroup).toHaveBeenCalledWith(
@@ -222,12 +215,7 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
 
   it('wires Sources, Frameworks, and Resources build phases', async () => {
     const project = buildProjectMock()
-    const config = withDeviceActivityExtension(
-      { ios: { bundleIdentifier: 'com.example.app' } } as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    await runXcodeMod(project)
 
     const phaseTypes = project.addBuildPhase.mock.calls.map((call) => call[1])
     expect(phaseTypes).toEqual([
@@ -239,12 +227,7 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
 
   it('sets MARKETING_VERSION and CURRENT_PROJECT_VERSION on the extension build settings', async () => {
     const project = buildProjectMock()
-    const config = withDeviceActivityExtension(
-      { ios: { bundleIdentifier: 'com.example.app' } } as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    await runXcodeMod(project)
 
     const configurations = project.pbxXCBuildConfigurationSection.mock.results[0]
       .value as Record<string, { buildSettings: Record<string, string> }>
@@ -256,18 +239,26 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
     expect(buildSettings.SKIP_INSTALL).toBe('YES')
   })
 
+  it('writes PRODUCT_BUNDLE_IDENTIFIER unquoted', async () => {
+    const project = buildProjectMock()
+    await runXcodeMod(project)
+
+    const configurations = project.pbxXCBuildConfigurationSection.mock.results[0]
+      .value as Record<string, { buildSettings: Record<string, string> }>
+    const buildSettings = configurations['config-uuid'].buildSettings
+    expect(buildSettings.PRODUCT_BUNDLE_IDENTIFIER).toBe(
+      `com.example.app.${EXTENSION_TARGET_NAME}`,
+    )
+    expect(buildSettings.PRODUCT_BUNDLE_IDENTIFIER).not.toMatch(/^"|"$/)
+  })
+
   it('is idempotent — second run with target already present makes no calls', async () => {
     const project = buildProjectMock({
       existingTargets: {
         'existing-uuid': { name: `"${EXTENSION_TARGET_NAME}"` },
       },
     })
-    const config = withDeviceActivityExtension(
-      { ios: { bundleIdentifier: 'com.example.app' } } as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    await runXcodeMod(project)
 
     expect(project.addTarget).not.toHaveBeenCalled()
     expect(project.addBuildPhase).not.toHaveBeenCalled()
@@ -281,12 +272,7 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
         'existing-uuid': { name: EXTENSION_TARGET_NAME },
       },
     })
-    const config = withDeviceActivityExtension(
-      { ios: { bundleIdentifier: 'com.example.app' } } as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    await runXcodeMod(project)
 
     expect(project.addTarget).not.toHaveBeenCalled()
   })
@@ -297,12 +283,7 @@ describe('withDeviceActivityExtension — Xcode project mutation', () => {
         'some-uuid_comment': { name: EXTENSION_TARGET_NAME },
       },
     })
-    const config = withDeviceActivityExtension(
-      { ios: { bundleIdentifier: 'com.example.app' } } as never,
-      { appGroup: APP_GROUP },
-    ) as unknown as ConfigWithMods
-
-    await runXcodeMod(config, project)
+    await runXcodeMod(project)
 
     // The _comment key shouldn't trigger early-return.
     expect(project.addTarget).toHaveBeenCalled()

@@ -185,10 +185,15 @@ Opt in by adding an App Group and `deviceActivityReport: true` to the plugin opt
 ```
 
 ```ts
-import { getResolvedApps } from 'expo-list-installed-apps'
+import { getResolvedApps, getResolvedAppsError } from 'expo-list-installed-apps'
 
 const apps = await getResolvedApps()
 // [{ appName: 'Mail', packageName: 'com.apple.mobilemail', ... }, ...]
+
+// If the list keeps coming back empty, check whether the extension itself
+// reported a failure (e.g. JSON encode error inside the report scene).
+// Returns `null` when there's nothing to report; also `null` on Android / iOS < 16.
+const lastError = await getResolvedAppsError()
 ```
 
 Caveats:

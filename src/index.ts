@@ -104,6 +104,23 @@ export async function getResolvedApps(): Promise<InstalledApp[]> {
   return apps.filter(isInstalledApp)
 }
 
+/**
+ * Returns the most recent error string the iOS DeviceActivityReportExtension
+ * stashed in shared `UserDefaults` (e.g. JSON encode failures inside the
+ * extension), or `null` if the extension has not reported an error.
+ *
+ * Use this when `getResolvedApps()` keeps returning `[]` and you want to
+ * distinguish "extension hasn't run yet" from "extension ran but failed."
+ * Always `null` on Android and iOS < 16.
+ */
+export async function getResolvedAppsError(): Promise<string | null> {
+  if (typeof ExpoListInstalledAppsModule.getResolvedAppsError !== 'function') {
+    return null
+  }
+  const result = await ExpoListInstalledAppsModule.getResolvedAppsError()
+  return typeof result === 'string' ? result : null
+}
+
 function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {
   if (typeof value !== 'string') return false
   return AUTHORIZATION_STATUSES.some((status) => status === value)

@@ -8,6 +8,7 @@ enum AppGroupStore {
   static let infoPlistKey = "EXListInstalledAppsAppGroup"
   static let selectionKey = "pickerSelection"
   static let resolvedAppsKey = "resolvedApps"
+  static let resolvedAppsErrorKey = "resolvedAppsError"
 
   static var appGroupId: String? {
     Bundle.main.object(forInfoDictionaryKey: infoPlistKey) as? String

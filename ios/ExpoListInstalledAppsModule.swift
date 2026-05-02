@@ -73,6 +73,10 @@ public final class ExpoListInstalledAppsModule: Module {
       }
     }
 
+    AsyncFunction("getResolvedAppsError") { () -> String? in
+      AppGroupStore.defaults?.string(forKey: AppGroupStore.resolvedAppsErrorKey)
+    }
+
     Function("getFamilyControlsAuthorizationStatus") { () -> String in
       #if canImport(FamilyControls)
       if #available(iOS 16.0, *) {

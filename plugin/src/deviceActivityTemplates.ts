@@ -29,11 +29,11 @@ extension DeviceActivityReport.Context {
   static let totalActivity = Self("TotalActivity")
 }
 
-// Log to Console.app (subsystem visible when filtering by the host app's
-// bundle id). Extensions can't print to the host process, so this is the
-// only way to surface failures from inside the extension.
+// Log to Console.app — filter by this subsystem (reverse-DNS per Apple's
+// convention) when debugging. Extensions can't print to the host process,
+// so this is the only way to surface failures from inside the extension.
 private let extensionLog = OSLog(
-  subsystem: "expo-list-installed-apps",
+  subsystem: "com.amehmeto.expo-list-installed-apps",
   category: "DeviceActivityReportExtension"
 )
 
@@ -57,6 +57,8 @@ enum TokenResolver {
   // The plugin re-renders this file on every prebuild, so it stays in sync.
   static let appGroup = "${appGroup}"
   static let storageKey = "resolvedApps"
+  // Mirror AppGroupStore.resolvedAppsErrorKey on the host side so
+  // getResolvedAppsError() can surface failures the extension wrote here.
   static let errorKey = "resolvedAppsError"
 
   static func resolveAndPersist(from results: DeviceActivityResults<DeviceActivityData>) async {
