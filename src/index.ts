@@ -1,6 +1,7 @@
 // Import the native module. On web, it will be resolved to ExpoListInstalledApps.web.ts
 // and on native platforms to ExpoListInstalledApps.ts
 import {
+  AUTHORIZATION_STATUSES,
   AppType,
   AuthorizationStatus,
   InstalledApp,
@@ -17,20 +18,46 @@ export {
   UniqueBy,
 } from './ExpoListInstalledApps.types'
 
+function isInstalledApp(value: unknown): value is InstalledApp {
+  if (typeof value !== 'object' || value === null) return false
+  return (
+    'packageName' in value &&
+    typeof value.packageName === 'string' &&
+    'versionName' in value &&
+    typeof value.versionName === 'string' &&
+    'versionCode' in value &&
+    typeof value.versionCode === 'number' &&
+    'firstInstallTime' in value &&
+    typeof value.firstInstallTime === 'number' &&
+    'lastUpdateTime' in value &&
+    typeof value.lastUpdateTime === 'number' &&
+    'appName' in value &&
+    typeof value.appName === 'string' &&
+    'icon' in value &&
+    typeof value.icon === 'string' &&
+    'apkDir' in value &&
+    typeof value.apkDir === 'string' &&
+    'size' in value &&
+    typeof value.size === 'number' &&
+    'activityName' in value &&
+    typeof value.activityName === 'string'
+  )
+}
+
 export async function listInstalledApps(
   options: {
     type?: AppType
     uniqueBy?: UniqueBy
   } = { type: AppType.ALL, uniqueBy: UniqueBy.PACKAGE },
 ): Promise<InstalledApp[]> {
-  const apps = (await ExpoListInstalledAppsModule.listInstalledApps(
+  const apps = await ExpoListInstalledAppsModule.listInstalledApps(
     options?.type ?? AppType.ALL,
     options?.uniqueBy ?? UniqueBy.PACKAGE,
-  )) as Promise<InstalledApp[]>
+  )
   if (!Array.isArray(apps)) {
     return []
   }
-  return apps || []
+  return apps.filter(isInstalledApp)
 }
 
 export async function canOpenApp(scheme: string): Promise<boolean> {
@@ -46,13 +73,10 @@ export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
   return await ExpoListInstalledAppsModule.getPlatformCapabilities()
 }
 
-const AUTHORIZATION_STATUSES: ReadonlySet<AuthorizationStatus> = new Set([
-  'approved',
-  'denied',
-  'notDetermined',
-  'unavailable',
-  'unknown',
-])
+function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {
+  if (typeof value !== 'string') return false
+  return AUTHORIZATION_STATUSES.some((status) => status === value)
+}
 
 /**
  * Requests Family Controls authorization (iOS 16+ only).
@@ -83,7 +107,5 @@ export function getFamilyControlsAuthorizationStatus(): AuthorizationStatus {
   }
   const result =
     ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus()
-  return AUTHORIZATION_STATUSES.has(result as AuthorizationStatus)
-    ? (result as AuthorizationStatus)
-    : 'unknown'
+  return isAuthorizationStatus(result) ? result : 'unknown'
 }
