@@ -57,8 +57,10 @@ private struct FamilyActivityPickerInner: View {
           // Drop stale resolved data so getResolvedApps() doesn't return
           // names from the previous selection while the OS reschedules the
           // report extension for the new one.
-          AppGroupStore.defaults?.removeObject(forKey: AppGroupStore.resolvedAppsKey)
-          AppGroupSelectionStore.persist(newValue)
+          if let defaults = AppGroupStore.defaults {
+            defaults.removeObject(forKey: AppGroupStore.resolvedAppsKey)
+            AppGroupSelectionStore.persist(newValue)
+          }
         }
     }
   }
