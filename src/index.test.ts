@@ -8,6 +8,8 @@ import {
   canOpenApp,
   getFamilyControlsAuthorizationStatus,
   getPlatformCapabilities,
+  getResolvedApps,
+  getResolvedAppsError,
   listInstalledApps,
   requestFamilyControlsAuthorization,
 } from './index'
@@ -19,6 +21,8 @@ jest.mock('./ExpoListInstalledAppsModule', () => ({
   getPlatformCapabilities: jest.fn(),
   requestFamilyControlsAuthorization: jest.fn(),
   getFamilyControlsAuthorizationStatus: jest.fn(),
+  getResolvedApps: jest.fn(),
+  getResolvedAppsError: jest.fn(),
 }))
 
 describe('listInstalledApps', () => {
@@ -390,5 +394,110 @@ describe('getFamilyControlsAuthorizationStatus', () => {
       'gibberish',
     )
     expect(getFamilyControlsAuthorizationStatus()).toBe('unknown')
+  })
+})
+
+describe('getResolvedApps', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.getResolvedApps.mockClear()
+  })
+
+  it('passes through the array returned by the native module', async () => {
+    const resolved = [
+      {
+        packageName: 'com.example.one',
+        appName: 'Example One',
+        versionName: '',
+        versionCode: 0,
+        firstInstallTime: 0,
+        lastUpdateTime: 0,
+        icon: '',
+        apkDir: '',
+        size: 0,
+        activityName: '',
+      },
+    ]
+    ExpoListInstalledAppsModule.getResolvedApps.mockResolvedValue(resolved)
+    const result = await getResolvedApps()
+    expect(result).toEqual(resolved)
+  })
+
+  it('returns [] when the native module returns null', async () => {
+    ExpoListInstalledAppsModule.getResolvedApps.mockResolvedValue(null)
+    expect(await getResolvedApps()).toEqual([])
+  })
+
+  it('returns [] when the native module returns a non-array value', async () => {
+    ExpoListInstalledAppsModule.getResolvedApps.mockResolvedValue({})
+    expect(await getResolvedApps()).toEqual([])
+  })
+
+  it('returns [] when the native module does not implement the function', async () => {
+    const original = ExpoListInstalledAppsModule.getResolvedApps
+    ;(
+      ExpoListInstalledAppsModule as unknown as Record<string, unknown>
+    ).getResolvedApps = undefined
+    expect(await getResolvedApps()).toEqual([])
+    ;(
+      ExpoListInstalledAppsModule as unknown as Record<string, unknown>
+    ).getResolvedApps = original
+  })
+
+  it('filters out entries that do not match the InstalledApp shape', async () => {
+    const wellShaped = {
+      packageName: 'com.ok',
+      appName: 'OK',
+      versionName: '',
+      versionCode: 0,
+      firstInstallTime: 0,
+      lastUpdateTime: 0,
+      icon: '',
+      apkDir: '',
+      size: 0,
+      activityName: '',
+    }
+    ExpoListInstalledAppsModule.getResolvedApps.mockResolvedValue([
+      wellShaped,
+      { appName: 'missing required fields' },
+      null,
+      'not-an-object',
+      { ...wellShaped, versionCode: 'not-a-number' },
+    ])
+    const result = await getResolvedApps()
+    expect(result).toEqual([wellShaped])
+  })
+})
+
+describe('getResolvedAppsError', () => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule.getResolvedAppsError = jest.fn()
+  })
+
+  it('passes through the error string the extension wrote', async () => {
+    ExpoListInstalledAppsModule.getResolvedAppsError.mockResolvedValue(
+      'encode failure',
+    )
+    expect(await getResolvedAppsError()).toBe('encode failure')
+  })
+
+  it('returns null when the native module returns null', async () => {
+    ExpoListInstalledAppsModule.getResolvedAppsError.mockResolvedValue(null)
+    expect(await getResolvedAppsError()).toBeNull()
+  })
+
+  it('returns null when the native module returns a non-string value', async () => {
+    ExpoListInstalledAppsModule.getResolvedAppsError.mockResolvedValue(42)
+    expect(await getResolvedAppsError()).toBeNull()
+  })
+
+  it('returns null when the native module does not implement the function', async () => {
+    const original = ExpoListInstalledAppsModule.getResolvedAppsError
+    ;(
+      ExpoListInstalledAppsModule as unknown as Record<string, unknown>
+    ).getResolvedAppsError = undefined
+    expect(await getResolvedAppsError()).toBeNull()
+    ;(
+      ExpoListInstalledAppsModule as unknown as Record<string, unknown>
+    ).getResolvedAppsError = original
   })
 })

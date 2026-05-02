@@ -37,7 +37,9 @@
         {
           "urlSchemes": ["maps", "music", "messages", "facetime", "mailto"],
           "ios": {
-            "familyControls": true
+            "familyControls": true,
+            "appGroups": ["group.expo.modules.listinstalledapps.example"],
+            "deviceActivityReport": true
           }
         }
       ],

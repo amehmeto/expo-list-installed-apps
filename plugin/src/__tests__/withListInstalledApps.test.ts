@@ -141,4 +141,64 @@ describe('withListInstalledApps', () => {
       expect(entitlements?.['com.apple.developer.family-controls']).toBe(true)
     })
   })
+
+  describe('ios.appGroups', () => {
+    it('writes the App Groups entitlement and Info.plist key when set', async () => {
+      const result = runPlugin({
+        ios: { appGroups: ['group.expo.modules.listinstalledapps.example'] },
+      })
+      const entitlements = await runMod(result.mods?.ios?.entitlements, {})
+      const infoPlist = await runMod(result.mods?.ios?.infoPlist, {})
+      expect(entitlements?.['com.apple.security.application-groups']).toEqual([
+        'group.expo.modules.listinstalledapps.example',
+      ])
+      expect(infoPlist?.EXListInstalledAppsAppGroup).toBe(
+        'group.expo.modules.listinstalledapps.example',
+      )
+    })
+
+    it('merges with pre-existing App Groups and dedupes', async () => {
+      const result = runPlugin({
+        ios: { appGroups: ['group.shared', 'group.new'] },
+      })
+      const entitlements = await runMod(result.mods?.ios?.entitlements, {
+        'com.apple.security.application-groups': ['group.shared'],
+      })
+      expect(entitlements?.['com.apple.security.application-groups']).toEqual([
+        'group.shared',
+        'group.new',
+      ])
+    })
+
+    it('is a no-op when appGroups is empty', () => {
+      const result = runPlugin({
+        ios: { appGroups: [] },
+      })
+      expect(result.mods?.ios?.entitlements).toBeUndefined()
+      expect(result.mods?.ios?.infoPlist).toBeUndefined()
+    })
+  })
+
+  describe('ios.deviceActivityReport', () => {
+    it('throws when enabled without an App Group', () => {
+      expect(() =>
+        runPlugin({
+          ios: { deviceActivityReport: true },
+        }),
+      ).toThrow(/appGroups to be set/)
+    })
+
+    it('registers dangerous + xcodeproj mods when paired with an App Group', () => {
+      const result = runPlugin({
+        ios: {
+          appGroups: ['group.expo.modules.listinstalledapps.example'],
+          deviceActivityReport: true,
+        },
+      })
+      expect(result.mods?.ios).toBeDefined()
+      const ios = result.mods?.ios as Record<string, unknown>
+      expect(ios.dangerous).toBeDefined()
+      expect(ios.xcodeproj).toBeDefined()
+    })
+  })
 })

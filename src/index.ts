@@ -73,6 +73,54 @@ export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
   return await ExpoListInstalledAppsModule.getPlatformCapabilities()
 }
 
+/**
+ * Returns the apps resolved by the iOS DeviceActivityReportExtension from the
+ * opaque tokens picked by `FamilyActivityPicker`.
+ *
+ * Returns `[]` on platforms where the extension is not registered (Android,
+ * iOS < 16, or before the extension has been triggered for the first time).
+ *
+ * Only `appName` and `packageName` carry meaningful data:
+ * - `appName` — `localizedDisplayName` from the extension; may be empty.
+ * - `packageName` — `bundleIdentifier`; reported as empty for some apps by
+ *   Apple's report API.
+ *
+ * Every other `InstalledApp` field (`versionName`, `versionCode`, `icon`, `size`,
+ * `firstInstallTime`, `lastUpdateTime`, `apkDir`, `activityName`) is filled with
+ * an empty default — the extension can't access that data (5 MB memory ceiling).
+ * Treat empty values as "not available" rather than "the field is genuinely empty".
+ *
+ * The extension is OS-scheduled, not on-demand: expect a short delay between
+ * a fresh selection and the first non-empty result.
+ */
+export async function getResolvedApps(): Promise<InstalledApp[]> {
+  if (typeof ExpoListInstalledAppsModule.getResolvedApps !== 'function') {
+    return []
+  }
+  const apps = await ExpoListInstalledAppsModule.getResolvedApps()
+  if (!Array.isArray(apps)) {
+    return []
+  }
+  return apps.filter(isInstalledApp)
+}
+
+/**
+ * Returns the most recent error string the iOS DeviceActivityReportExtension
+ * stashed in shared `UserDefaults` (e.g. JSON encode failures inside the
+ * extension), or `null` if the extension has not reported an error.
+ *
+ * Use this when `getResolvedApps()` keeps returning `[]` and you want to
+ * distinguish "extension hasn't run yet" from "extension ran but failed."
+ * Always `null` on Android and iOS < 16.
+ */
+export async function getResolvedAppsError(): Promise<string | null> {
+  if (typeof ExpoListInstalledAppsModule.getResolvedAppsError !== 'function') {
+    return null
+  }
+  const result = await ExpoListInstalledAppsModule.getResolvedAppsError()
+  return typeof result === 'string' ? result : null
+}
+
 function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {
   if (typeof value !== 'string') return false
   return AUTHORIZATION_STATUSES.some((status) => status === value)
