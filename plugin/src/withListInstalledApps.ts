@@ -15,10 +15,16 @@ export type ListInstalledAppsPluginOptions = {
   }
 }
 
+// Apple's documented cap on LSApplicationQueriesSchemes. Mirrored at runtime by
+// `getPlatformCapabilities().urlSchemeLimit` in
+// ios/ExpoListInstalledAppsModule.swift — keep both values in sync.
 const IOS_SCHEME_LIMIT = 50
 const FAMILY_CONTROLS_ENTITLEMENT = 'com.apple.developer.family-controls'
 const APP_GROUPS_ENTITLEMENT = 'com.apple.security.application-groups'
 export const APP_GROUP_INFO_PLIST_KEY = 'EXListInstalledAppsAppGroup'
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string')
 
 const withFamilyControlsEntitlement: ConfigPlugin = (config) =>
   withEntitlementsPlist(config, (cfg) => {
@@ -51,8 +57,8 @@ const withQueriesSchemes: ConfigPlugin<{ urlSchemes: string[] }> = (
   { urlSchemes },
 ) =>
   withInfoPlist(config, (cfg) => {
-    const existing = (cfg.modResults.LSApplicationQueriesSchemes ??
-      []) as string[]
+    const raw = cfg.modResults.LSApplicationQueriesSchemes
+    const existing = isStringArray(raw) ? raw : []
     const merged = Array.from(
       new Set([...existing, ...urlSchemes].map((s) => s.toLowerCase())),
     )

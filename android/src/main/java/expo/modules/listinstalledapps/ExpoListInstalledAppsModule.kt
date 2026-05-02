@@ -32,7 +32,7 @@ class ExpoListInstalledAppsModule : Module() {
     }
 
     fun getContext(): Context {
-        return  appContext.reactContext ?: throw IllegalStateException("Context is null")
+        return appContext.reactContext ?: throw IllegalStateException("Context is null")
     }
 
     fun getBase64IconImage(appInfo: ApplicationInfo): String {

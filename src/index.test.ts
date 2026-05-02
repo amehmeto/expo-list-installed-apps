@@ -1,4 +1,8 @@
-import { AppType, UniqueBy } from './ExpoListInstalledApps.types'
+import {
+  AUTHORIZATION_STATUSES,
+  AppType,
+  UniqueBy,
+} from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 import {
   canOpenApp,
@@ -170,6 +174,22 @@ describe('listInstalledApps', () => {
 
     expect(result).toEqual([])
   })
+
+  it('should filter out items that do not match the InstalledApp shape', async () => {
+    const validApp = mockApps[0]
+    const garbage = [
+      validApp,
+      null,
+      'oops',
+      { packageName: 'incomplete' },
+      { ...validApp, versionCode: 'should-be-number' },
+    ]
+    ExpoListInstalledAppsModule.listInstalledApps.mockResolvedValue(garbage)
+
+    const result = await listInstalledApps()
+
+    expect(result).toEqual([validApp])
+  })
 })
 
 describe('canOpenApp', () => {
@@ -190,7 +210,9 @@ describe('canOpenApp', () => {
   })
 
   it('returns false for non-string input without calling the native module', async () => {
-    const result = await canOpenApp(undefined as unknown as string)
+    // Intentionally violating the public type to verify the runtime guard.
+    // @ts-expect-error consumers may pass garbage in plain JS
+    const result = await canOpenApp(undefined)
     expect(result).toBe(false)
     expect(ExpoListInstalledAppsModule.canOpenApp).not.toHaveBeenCalled()
   })
@@ -356,13 +378,9 @@ describe('getFamilyControlsAuthorizationStatus', () => {
     ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockClear()
   })
 
-  it.each([
-    ['approved'],
-    ['denied'],
-    ['notDetermined'],
-    ['unavailable'],
-    ['unknown'],
-  ])('passes through the %s status', (status) => {
+  // Driven by AUTHORIZATION_STATUSES so adding a status updates both the
+  // runtime check and this test in lockstep.
+  it.each(AUTHORIZATION_STATUSES)('passes through the %s status', (status) => {
     ExpoListInstalledAppsModule.getFamilyControlsAuthorizationStatus.mockReturnValue(
       status,
     )
