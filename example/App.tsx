@@ -34,14 +34,17 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context'
 
-const PROBE_SCHEMES = [
-  ...ExpoListInstalledApps.DEFAULT_IOS_APP_SCHEMES,
-  'maps',
-  'music',
-  'messages',
-  'facetime',
-  'mailto',
-]
+// Dedupe against the catalog so future catalog additions can't double up.
+const PROBE_SCHEMES = Array.from(
+  new Set([
+    ...ExpoListInstalledApps.DEFAULT_IOS_APP_SCHEMES,
+    'maps',
+    'music',
+    'messages',
+    'facetime',
+    'mailto',
+  ]),
+)
 const FILTER_ACTIVE = 'blue'
 const FILTER_INACTIVE = 'grey'
 const APP_TYPE_FILTER_LABEL: Record<AppType, string> = {

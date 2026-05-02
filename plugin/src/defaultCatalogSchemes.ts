@@ -1,10 +1,11 @@
 /**
- * URL schemes from `DEFAULT_IOS_APP_CATALOG`, duplicated here so the config
- * plugin can read them without crossing the plugin's TypeScript `rootDir`.
+ * URL schemes from `DEFAULT_IOS_APP_CATALOG`, duplicated here because the
+ * plugin's TypeScript `rootDir` is `plugin/src` and can't import from `src/`.
  *
- * Kept in sync with `src/iosAppCatalog.ts` via the test
- * `defaultCatalogSchemes.test.ts` — if you add or remove an entry there,
- * mirror it here and the sync test will pass.
+ * Kept in sync with `src/iosAppCatalog.ts` via the `'plugin scheme list stays
+ * in sync with the source-of-truth catalog'` test inside the `useDefaultCatalog`
+ * describe block in `plugin/src/__tests__/withListInstalledApps.test.ts`. Add
+ * or remove entries on both sides and the sync test will pass.
  */
 export const DEFAULT_IOS_APP_SCHEMES: readonly string[] = [
   'instagram',
