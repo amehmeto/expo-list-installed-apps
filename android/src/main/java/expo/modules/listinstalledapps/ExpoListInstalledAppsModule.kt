@@ -129,7 +129,7 @@ class ExpoListInstalledAppsModule : Module() {
         "familyControlsAvailable" to false,
     )
 
-    fun queryInstalledApps(type: String, uniqueBy: String): List<Map<String, String>> {
+    fun queryInstalledApps(type: String, uniqueBy: String): List<Map<String, Any>> {
         val context: Context = getContext()
         checkAndRequestPermission()
 
@@ -163,7 +163,7 @@ class ExpoListInstalledAppsModule : Module() {
             }
         }
 
-        val appList = mutableListOf<Map<String, String>>()
+        val appList = mutableListOf<Map<String, Any>>()
         val seenPackages = mutableSetOf<String>()
 
         for (resolveInfo in pkgAppsList) {
@@ -183,7 +183,7 @@ class ExpoListInstalledAppsModule : Module() {
         return appList
     }
 
-    fun formatAppInfo(packageInfo: PackageInfo, activityName: String): Map<String, String> {
+    fun formatAppInfo(packageInfo: PackageInfo, activityName: String): Map<String, Any> {
         val context: Context = getContext()
 
         val appInfo = packageInfo.applicationInfo ?: throw IllegalStateException("ApplicationInfo is null")
@@ -201,13 +201,13 @@ class ExpoListInstalledAppsModule : Module() {
         val appInfoFormatted = mapOf(
                 "packageName" to packageName,
                 "versionName" to versionName,
-                "versionCode" to versionCode.toString(),
-                "firstInstallTime" to firstInstallTime.toString(),
-                "lastUpdateTime" to lastUpdateTime.toString(),
+                "versionCode" to versionCode,
+                "firstInstallTime" to firstInstallTime,
+                "lastUpdateTime" to lastUpdateTime,
                 "appName" to label,
                 "icon" to iconBase64,
                 "apkDir" to apkDir,
-                "size" to size.toString(),
+                "size" to size,
                 "activityName" to activityName
         )
 
