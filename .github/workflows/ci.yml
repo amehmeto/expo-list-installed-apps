@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   changes:
@@ -68,6 +69,8 @@ jobs:
   android:
     name: Android Build
     runs-on: ubuntu-latest
+    env:
+      APK_ARTIFACT_NAME: expo-list-installed-apps-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.ref_name }}
 
     steps:
       - name: Checkout code
@@ -122,12 +125,23 @@ jobs:
           mv example/android/app/build/outputs/apk/release/app-release.apk \
              example/android/app/build/outputs/apk/release/expo-list-installed-apps.apk
 
+      - name: Delete superseded APK artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/actions/artifacts?name=${APK_ARTIFACT_NAME}&per_page=100" \
+            --jq '.artifacts[].id' \
+            | while read -r artifact_id; do
+                gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/${artifact_id}"
+              done
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: expo-list-installed-apps
+          name: ${{ env.APK_ARTIFACT_NAME }}
           path: example/android/app/build/outputs/apk/release/expo-list-installed-apps.apk
-          retention-days: 30
+          retention-days: 7
+          overwrite: true
 
       - name: Create PR release
         if: github.event_name == 'pull_request'
