@@ -60,7 +60,7 @@
     "semantic-release": "^25.0.2"
   },
   "peerDependencies": {
-    "expo": "~55.0.0",
+    "expo": ">=55.0.0",
     "react": "*",
     "react-native": "*"
   }
