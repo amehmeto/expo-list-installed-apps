@@ -81,9 +81,9 @@ cd .. && npx expo run:ios
 - Prettier: single quotes, trailing commas, no semicolons
 - TypeScript tests use `jest.mock()` for native module injection
 - Kotlin tests use JUnit 4 + Mockito
-- Husky pre-commit runs lint-staged; pre-push blocks direct master push and runs full test suite + detekt
+- Husky pre-commit runs lint-staged; pre-push blocks direct main push and runs full test suite + detekt
 
 ## CI/CD
 
 - GitHub Actions CI: lint → type check → build → Jest tests → Android Kotlin tests → APK build → iOS xcodebuild (gated on `ios/**` path filter to keep macOS runner cost down)
-- Semantic Release on master via `.releaserc.json` (commit-analyzer, npm publish disabled)
+- Semantic Release on main via `.releaserc.json` (commit-analyzer, npm publish disabled)
