@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
-import android.os.Build
 
 import org.mockito.Mockito.*
 import org.junit.Assert.*
@@ -35,15 +34,18 @@ class ExpoListInstalledAppsModuleTest {
     }
 
     @Test
-    fun testGetBase64IconImage_adaptiveIconDrawable() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            `when`(mockAppInfo.loadIcon(any())).thenReturn(mockAdaptiveIconDrawable)
-            `when`(mockAdaptiveIconDrawable.intrinsicWidth).thenReturn(10)
-            `when`(mockAdaptiveIconDrawable.intrinsicHeight).thenReturn(10)
-            // Bitmap.createBitmap is static, so we can't mock it easily, but we can check for no crash
-            val result = module.getBase64IconImage(mockAppInfo)
-            assertTrue(result.startsWith("data:image/png;base64,") || result.startsWith("data:image/png;base64"))
-        }
+    fun testGetBase64IconImage_fallsBackToPlaceholderWithoutGraphics() {
+        // Bitmap and Canvas are stubbed in plain JUnit and throw
+        // RuntimeException("Stub!"), so this exercises the fallback path rather
+        // than the encode path. The contract under test is that callers always
+        // receive a usable data URI and never see an exception — including the
+        // exception the logging call itself would raise here.
+        `when`(mockAppInfo.loadIcon(any())).thenReturn(mockAdaptiveIconDrawable)
+
+        val result = module.getBase64IconImage(mockAppInfo)
+
+        assertEquals(PLACEHOLDER_ICON, result)
+        assertTrue(result.startsWith("data:image/"))
     }
 
     @Test
