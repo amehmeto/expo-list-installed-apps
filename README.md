@@ -102,6 +102,12 @@ type InstalledApp = {
 }
 ```
 
+### Android icon rendering
+
+`icon` is a 96 × 96 data URI: WebP on Android 11 and later, PNG on older Android versions. Adaptive icons expose their background and foreground layers without the system launcher mask. The module does not impose a circle or rounded rectangle. Set `borderRadius` on the React Native image to choose the shape. Legacy icons retain their own transparency.
+
+Encoded icons are cached up to 2 MiB of string data per module instance. App updates, reinstalls, icon resource changes and Android resource configuration changes use a fresh cache entry. App metadata is read on each scan, and failed icon loads are retried. The cache is cleared when the module is destroyed.
+
 ### iOS default app catalog (M2.5)
 
 Calling `canOpenApp(scheme)` on iOS only works if the scheme is pre-declared in `LSApplicationQueriesSchemes`. The bundled catalog ships ~30 popular apps so consumers don't have to hand-roll their own starter list.

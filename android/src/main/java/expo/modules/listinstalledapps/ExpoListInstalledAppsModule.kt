@@ -8,8 +8,11 @@ import android.net.Uri
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Rect
+import android.graphics.drawable.AdaptiveIconDrawable
 import android.os.Build
 import android.util.Base64
 import android.util.Log
@@ -28,6 +31,7 @@ private fun ResolveInfo.isSystemApp(): Boolean =
 
 class ExpoListInstalledAppsModule : Module() {
     private var context: Context? = null
+    private val iconCache by lazy { EncodedIconCache() }
 
     private companion object {
         private const val PERMISSION_REQUEST_CODE = 100
@@ -73,15 +77,21 @@ class ExpoListInstalledAppsModule : Module() {
             val context: Context = getContext()
             val icon = appInfo.loadIcon(context.packageManager)
 
-            // Draw straight into the target box. A Drawable scales itself to its
-            // bounds, so an adaptive icon never allocates its full intrinsic
-            // bitmap, and every drawable type works — the previous `when` fell
-            // back to the placeholder for anything that was neither a
-            // BitmapDrawable nor an AdaptiveIconDrawable.
             bitmap = Bitmap.createBitmap(ICON_SIZE_PX, ICON_SIZE_PX, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
-            icon.setBounds(0, 0, ICON_SIZE_PX, ICON_SIZE_PX)
-            icon.draw(canvas)
+            val originalBounds = Rect(icon.bounds)
+            try {
+                icon.setBounds(0, 0, ICON_SIZE_PX, ICON_SIZE_PX)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
+                    // Keep Android's layer positions, but leave clipping to the consumer.
+                    icon.background?.draw(canvas)
+                    icon.foreground?.draw(canvas)
+                } else {
+                    icon.draw(canvas)
+                }
+            } finally {
+                icon.bounds = originalBounds
+            }
 
             val (format, mimeType) = iconEncoding()
             val outputStream = ByteArrayOutputStream()
@@ -253,7 +263,11 @@ class ExpoListInstalledAppsModule : Module() {
         val apkDir = appInfo.sourceDir ?: "Unknown"
         val size = if (apkDir != "Unknown") File(apkDir).length() else 0L
 
-        val iconBase64 = getBase64IconImage(appInfo)
+        val iconKey = IconCacheKey(
+            packageName, lastUpdateTime, firstInstallTime, appInfo.sourceDir, appInfo.icon,
+            Configuration(context.resources.configuration),
+        )
+        val iconBase64 = iconCache.getOrLoad(iconKey) { getBase64IconImage(appInfo) }
 
         val appInfoFormatted = mapOf(
                 "packageName" to packageName,
@@ -279,6 +293,8 @@ class ExpoListInstalledAppsModule : Module() {
         // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
         // The module will be accessible from `requireNativeModule('ExpoListInstalledApps')` in JavaScript.
         Name("ExpoListInstalledApps")
+
+        OnDestroy { iconCache.clear() }
 
         AsyncFunction("listInstalledApps") { type: String, uniqueBy: String ->
             try {
