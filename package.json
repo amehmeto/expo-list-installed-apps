@@ -40,7 +40,7 @@
       "shellcheck"
     ],
     "android/**/*.kt": [
-      "bash -c 'cd example/android && ./gradlew :$(node -p \"require(\\\"../../package.json\\\").name.replace(\\\"@\\\", \\\"\\\").replace(\\\"/\\\", \\\"-\\\")\"):detekt'"
+      "sh .husky/scripts/detekt-staged.sh"
     ]
   },
   "dependencies": {

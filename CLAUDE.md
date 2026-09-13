@@ -74,7 +74,9 @@ cd .. && npx expo run:ios
 
 **Module registration**: `expo-module.config.json` registers both the Android (`expo.modules.listinstalledapps.ExpoListInstalledAppsModule`) and iOS (`ExpoListInstalledAppsModule`) modules for Expo autolinking.
 
-**Example app** (`example/`): Working Expo app demonstrating the module. Metro config uses monorepo setup pointing to parent directory.
+**Example app** (`example/`): Working Expo app demonstrating the module. Metro config uses monorepo setup pointing to parent directory. `example/theme.ts` holds the light/dark token layer the UI reads through `useTheme()`; no raw colour values at the call site.
+
+`example/android/` and `example/ios/` are **generated output** — produced by `expo prebuild` from `example/app.json`, gitignored, and not versioned. A fresh clone has neither, so `gradlew` and the Xcode workspace do not exist until you prebuild (see the setup commands above). Gradle and Xcode invocations must therefore guard on the generated project being present, as `.husky/pre-push` and `.husky/scripts/detekt-staged.sh` do. Changing appearance or orientation settings in `app.json` only takes effect after a prebuild.
 
 ## Code Style
 
