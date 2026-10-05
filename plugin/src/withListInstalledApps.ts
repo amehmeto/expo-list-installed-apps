@@ -98,18 +98,19 @@ const withListInstalledApps: ConfigPlugin<ListInstalledAppsPluginOptions> = (
   }
 
   const appGroups = ios.appGroups ?? []
-  if (appGroups.length > 0) {
+  const [appGroup] = appGroups
+  if (appGroup !== undefined) {
     next = withAppGroupsEntitlement(next, { appGroups })
-    next = withAppGroupInfoPlistKey(next, { appGroup: appGroups[0] })
+    next = withAppGroupInfoPlistKey(next, { appGroup })
   }
 
   if (ios.deviceActivityReport === true) {
-    if (appGroups.length === 0) {
+    if (appGroup === undefined) {
       throw new Error(
         '[expo-list-installed-apps] ios.deviceActivityReport requires ios.appGroups to be set (the extension and main app must share an App Group).',
       )
     }
-    next = withDeviceActivityExtension(next, { appGroup: appGroups[0] })
+    next = withDeviceActivityExtension(next, { appGroup })
   }
 
   return next
