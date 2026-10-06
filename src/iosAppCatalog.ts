@@ -1,4 +1,4 @@
-import { IosKnownApp } from './ExpoListInstalledApps.types'
+import type { IosKnownApp } from './ExpoListInstalledApps.types'
 
 /**
  * Curated list of popular iOS apps and their URL schemes, suitable as a

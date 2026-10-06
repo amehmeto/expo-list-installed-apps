@@ -1,6 +1,6 @@
 import { requireNativeViewManager } from 'expo-modules-core'
-import { ComponentType, useEffect } from 'react'
-import { Platform, View, ViewProps } from 'react-native'
+import { type ComponentType, useEffect } from 'react'
+import { Platform, View, type ViewProps } from 'react-native'
 
 export type FamilyActivitySelectionCounts = {
   applicationCount: number

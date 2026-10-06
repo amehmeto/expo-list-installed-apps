@@ -3,19 +3,19 @@
 import {
   AUTHORIZATION_STATUSES,
   AppType,
-  AuthorizationStatus,
-  InstalledApp,
-  PlatformCapabilities,
+  type AuthorizationStatus,
+  type InstalledApp,
+  type PlatformCapabilities,
   UniqueBy,
 } from './ExpoListInstalledApps.types'
 import ExpoListInstalledAppsModule from './ExpoListInstalledAppsModule'
 
 export {
   AppType,
-  AuthorizationStatus,
-  InstalledApp,
-  IosKnownApp,
-  PlatformCapabilities,
+  type AuthorizationStatus,
+  type InstalledApp,
+  type IosKnownApp,
+  type PlatformCapabilities,
   UniqueBy,
 } from './ExpoListInstalledApps.types'
 

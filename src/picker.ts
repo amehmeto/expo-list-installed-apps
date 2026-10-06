@@ -1,5 +1,5 @@
 export {
   FamilyActivityPicker,
-  FamilyActivityPickerProps,
-  FamilyActivitySelectionCounts,
+  type FamilyActivityPickerProps,
+  type FamilyActivitySelectionCounts,
 } from './FamilyActivityPicker'
