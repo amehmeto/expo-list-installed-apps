@@ -9,6 +9,8 @@
     "build:plugin": "expo-module build plugin",
     "clean": "expo-module clean",
     "lint": "expo-module lint",
+    "lint:kotlin": "bash scripts/detekt.sh",
+    "lint:kotlin-dupes": "jscpd",
     "test": "expo-module test",
     "prepare": "expo-module prepare && expo-module build plugin && husky",
     "prepublishOnly": "expo-module prepublishOnly",
@@ -55,6 +57,7 @@
     "expo-modules-core": "^2.2.0",
     "get-east-asian-width": "^1.4.0",
     "husky": "^9.1.7",
+    "jscpd": "4.3.0",
     "lint-staged": "^16.0.0",
     "prettier": "3.2.5",
     "semantic-release": "^25.0.2"

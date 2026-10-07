@@ -2,11 +2,7 @@ package expo.modules.listinstalledapps
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.drawable.AdaptiveIconDrawable
-import android.graphics.drawable.BitmapDrawable
 
 import org.mockito.Mockito.*
 import org.junit.Assert.*
