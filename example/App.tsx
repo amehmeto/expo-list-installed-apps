@@ -5,6 +5,7 @@ import {
   getResolvedApps,
   getResolvedAppsError,
   requestFamilyControlsAuthorization,
+  saveFamilyActivitySelectionDraft,
 } from 'expo-list-installed-apps'
 import {
   AppType,
@@ -444,13 +445,16 @@ function PickerModal({
 }) {
   const theme = useTheme()
   const reduceMotion = useReducedMotion()
+  const saveAndClose = () => {
+    saveFamilyActivitySelectionDraft().finally(onClose)
+  }
 
   return (
     <Modal
       visible={visible}
       animationType={reduceMotion ? 'fade' : 'slide'}
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={saveAndClose}
     >
       <View
         style={[styles.pickerContainer, { backgroundColor: theme.background }]}
@@ -464,11 +468,12 @@ function PickerModal({
           >
             Pick apps to manage
           </Text>
-          <ActionButton label="Done" variant="primary" onPress={onClose} />
+          <ActionButton label="Done" variant="primary" onPress={saveAndClose} />
         </View>
         <FamilyActivityPicker
           style={styles.pickerBody}
           headerTitle="Pick apps to manage"
+          restoresSavedSelection
           onSelectionCountsChange={({ nativeEvent }) =>
             onSelectionChange(nativeEvent)
           }

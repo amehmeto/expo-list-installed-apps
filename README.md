@@ -198,6 +198,27 @@ import { FamilyActivityPicker } from 'expo-list-installed-apps/picker'
 
 The picker's selection consists of opaque `ApplicationToken`s — bundle IDs and app names are not exposed to your main app directly. Only counts (`applicationCount`, `categoryCount`, `webDomainCount`) cross the JS bridge synchronously; to resolve tokens to display names, use `getResolvedApps()` together with the bundled `DeviceActivityReportExtension` (M4 — see below).
 
+Each change goes to a draft, not to the saved selection. Call `saveFamilyActivitySelectionDraft()` when the user confirms (a Save button), or `discardFamilyActivitySelectionDraft()` when they cancel. With `restoresSavedSelection`, the picker opens on the saved selection, and each event also says whether the picked tokens are exactly the saved ones (`matchesSavedSelection`) and whether every saved token is still picked (`keepsSavedSelection`). Both compare tokens, so swapping one app for another counts as a change even when the counts stay the same.
+
+```tsx
+import {
+  discardFamilyActivitySelectionDraft,
+  saveFamilyActivitySelectionDraft,
+} from 'expo-list-installed-apps'
+;<FamilyActivityPicker
+  style={{ flex: 1 }}
+  restoresSavedSelection
+  onSelectionCountsChange={({ nativeEvent }) => {
+    console.log(
+      nativeEvent.matchesSavedSelection,
+      nativeEvent.keepsSavedSelection,
+    )
+  }}
+/>
+// On Save:   await saveFamilyActivitySelectionDraft()
+// On Cancel: await discardFamilyActivitySelectionDraft()
+```
+
 On Android (and iOS < 16) `FamilyActivityPicker` renders an empty `View` so the import is safe in cross-platform code. Branch on `getPlatformCapabilities().familyControlsAvailable` if you need to hide the UI entirely.
 
 #### Resolving picker tokens to app names (M4)

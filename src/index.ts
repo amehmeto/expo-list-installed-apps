@@ -127,6 +127,36 @@ export async function getResolvedAppsError(): Promise<string | null> {
   return typeof result === 'string' ? result : null
 }
 
+/**
+ * Makes the selection being edited in `FamilyActivityPicker` the saved one,
+ * then drops the draft and the names `getResolvedApps()` resolved for the
+ * previous selection. Does nothing when no draft exists, and on Android and
+ * iOS < 16.
+ */
+export async function saveFamilyActivitySelectionDraft(): Promise<void> {
+  if (
+    typeof ExpoListInstalledAppsModule.saveFamilyActivitySelectionDraft !==
+    'function'
+  ) {
+    return
+  }
+  await ExpoListInstalledAppsModule.saveFamilyActivitySelectionDraft()
+}
+
+/**
+ * Drops the selection being edited in `FamilyActivityPicker` and keeps the
+ * saved one. Does nothing on Android and iOS < 16.
+ */
+export async function discardFamilyActivitySelectionDraft(): Promise<void> {
+  if (
+    typeof ExpoListInstalledAppsModule.discardFamilyActivitySelectionDraft !==
+    'function'
+  ) {
+    return
+  }
+  await ExpoListInstalledAppsModule.discardFamilyActivitySelectionDraft()
+}
+
 function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {
   if (typeof value !== 'string') return false
   return AUTHORIZATION_STATUSES.some((status) => status === value)

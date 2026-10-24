@@ -7,6 +7,7 @@ import FamilyControls
 
 public final class FamilyActivityPickerProps: ExpoSwiftUI.ViewProps {
   @Field public var headerTitle: String = ""
+  @Field public var restoresSavedSelection: Bool = false
   public var onSelectionCountsChange = EventDispatcher()
 }
 
@@ -37,6 +38,8 @@ public struct FamilyActivityPicker: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingVie
 private struct FamilyActivityPickerInner: View {
   @ObservedObject var props: FamilyActivityPickerProps
   @State private var selection = FamilyActivitySelection()
+  @State private var pendingSeed: FamilyActivitySelection?
+  @State private var hasUserChanged = false
 
   // TODO: when the iOS floor moves to 17:
   //   1. Use FamilyActivityPicker(headerText:selection:) and drop the manual
@@ -51,21 +54,58 @@ private struct FamilyActivityPickerInner: View {
           .padding()
       }
       FamilyControls.FamilyActivityPicker(selection: $selection)
+        .onAppear(perform: seedSelection)
+        // The prop can arrive after the first appearance.
+        .onChange(of: props.restoresSavedSelection) { _ in
+          seedSelection()
+        }
         .onChange(of: selection) { newValue in
+          if let seed = pendingSeed, newValue == seed {
+            pendingSeed = nil
+            return
+          }
+          hasUserChanged = true
+          AppGroupSelectionStore.persistDraft(newValue)
+          let baseline = savedBaseline()
           props.onSelectionCountsChange([
             "applicationCount": newValue.applicationTokens.count,
             "categoryCount": newValue.categoryTokens.count,
             "webDomainCount": newValue.webDomainTokens.count,
+            "matchesSavedSelection": newValue.hasSameTokens(as: baseline),
+            "keepsSavedSelection": newValue.keepsTokens(of: baseline),
           ])
-          // Drop stale resolved data so getResolvedApps() doesn't return
-          // names from the previous selection while the OS reschedules the
-          // report extension for the new one.
-          if let defaults = AppGroupStore.defaults {
-            defaults.removeObject(forKey: AppGroupStore.resolvedAppsKey)
-            AppGroupSelectionStore.persist(newValue)
-          }
         }
     }
+  }
+
+  private func seedSelection() {
+    guard !hasUserChanged else { return }
+    let seed = AppGroupSelectionStore.loadDraft()
+      ?? (props.restoresSavedSelection ? AppGroupSelectionStore.loadSaved() : nil)
+      ?? FamilyActivitySelection()
+    guard seed != selection else { return }
+    pendingSeed = seed
+    selection = seed
+  }
+
+  private func savedBaseline() -> FamilyActivitySelection {
+    guard props.restoresSavedSelection else { return FamilyActivitySelection() }
+    return AppGroupSelectionStore.loadSaved() ?? FamilyActivitySelection()
+  }
+}
+
+@available(iOS 16.0, *)
+private extension FamilyActivitySelection {
+  func hasSameTokens(as other: FamilyActivitySelection) -> Bool {
+    applicationTokens == other.applicationTokens
+      && categoryTokens == other.categoryTokens
+      && webDomainTokens == other.webDomainTokens
+  }
+
+  func keepsTokens(of other: FamilyActivitySelection) -> Bool {
+    applicationTokens.isSuperset(of: other.applicationTokens)
+      && categoryTokens.isSuperset(of: other.categoryTokens)
+      && webDomainTokens.isSuperset(of: other.webDomainTokens)
   }
 }
 #endif
