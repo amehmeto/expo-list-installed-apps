@@ -27,11 +27,10 @@ enum AppGroupStore {
 @available(iOS 16.0, *)
 enum AppGroupSelectionStore {
   static func loadSaved() -> FamilyActivitySelection? {
-    load(forKey: AppGroupStore.selectionKey)
-  }
-
-  static func loadDraft() -> FamilyActivitySelection? {
-    load(forKey: AppGroupStore.selectionDraftKey)
+    guard let data = AppGroupStore.defaults?.data(forKey: AppGroupStore.selectionKey) else {
+      return nil
+    }
+    return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
   }
 
   static func persistDraft(_ selection: FamilyActivitySelection) {
@@ -58,11 +57,6 @@ enum AppGroupSelectionStore {
 
   static func discardDraft() {
     AppGroupStore.defaults?.removeObject(forKey: AppGroupStore.selectionDraftKey)
-  }
-
-  private static func load(forKey key: String) -> FamilyActivitySelection? {
-    guard let data = AppGroupStore.defaults?.data(forKey: key) else { return nil }
-    return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
   }
 }
 #endif

@@ -80,9 +80,7 @@ private struct FamilyActivityPickerInner: View {
 
   private func seedSelection() {
     guard !hasUserChanged else { return }
-    let seed = AppGroupSelectionStore.loadDraft()
-      ?? (props.restoresSavedSelection ? AppGroupSelectionStore.loadSaved() : nil)
-      ?? FamilyActivitySelection()
+    let seed = savedBaseline()
     guard seed != selection else { return }
     pendingSeed = seed
     selection = seed

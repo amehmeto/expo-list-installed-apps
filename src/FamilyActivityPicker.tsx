@@ -22,7 +22,6 @@ export type FamilyActivityPickerProps = ViewProps & {
    * Opens the picker on the saved selection, and compares each change with
    * it. Leave it off when the screen edits something that does not own the
    * saved selection: the picker then opens empty and compares with nothing.
-   * A draft that was neither saved nor discarded always wins.
    */
   restoresSavedSelection?: boolean
   /**
