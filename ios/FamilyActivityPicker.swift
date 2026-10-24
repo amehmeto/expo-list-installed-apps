@@ -71,8 +71,8 @@ private struct FamilyActivityPickerInner: View {
             "applicationCount": newValue.applicationTokens.count,
             "categoryCount": newValue.categoryTokens.count,
             "webDomainCount": newValue.webDomainTokens.count,
-            "matchesSavedSelection": newValue.hasSameTokens(as: baseline),
-            "keepsSavedSelection": newValue.keepsTokens(of: baseline),
+            "isSameAsSavedSelection": newValue.hasSameTokens(as: baseline),
+            "isSupersetOfSavedSelection": newValue.keepsTokens(of: baseline),
           ])
         }
     }

@@ -11,9 +11,9 @@ export type FamilyActivitySelectionCounts = {
    * Compared on the tokens, so swapping one app for another is a change even
    * when the counts stay the same.
    */
-  matchesSavedSelection: boolean
+  isSameAsSavedSelection: boolean
   /** Every saved app, category and web domain is still picked. */
-  keepsSavedSelection: boolean
+  isSupersetOfSavedSelection: boolean
 }
 
 export type FamilyActivityPickerProps = ViewProps & {

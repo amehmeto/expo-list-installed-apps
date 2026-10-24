@@ -198,7 +198,7 @@ import { FamilyActivityPicker } from 'expo-list-installed-apps/picker'
 
 The picker's selection consists of opaque `ApplicationToken`s — bundle IDs and app names are not exposed to your main app directly. Only counts (`applicationCount`, `categoryCount`, `webDomainCount`) cross the JS bridge synchronously; to resolve tokens to display names, use `getResolvedApps()` together with the bundled `DeviceActivityReportExtension` (M4 — see below).
 
-Each change goes to a draft, not to the saved selection. Call `saveFamilyActivitySelectionDraft()` when the user confirms (a Save button), or `discardFamilyActivitySelectionDraft()` when they cancel. With `restoresSavedSelection`, the picker opens on the saved selection, and each event also says whether the picked tokens are exactly the saved ones (`matchesSavedSelection`) and whether every saved token is still picked (`keepsSavedSelection`). Both compare tokens, so swapping one app for another counts as a change even when the counts stay the same.
+Each change goes to a draft, not to the saved selection. Call `saveFamilyActivitySelectionDraft()` when the user confirms (a Save button), or `discardFamilyActivitySelectionDraft()` when they cancel. With `restoresSavedSelection`, the picker opens on the saved selection, and each event also says whether the picked tokens are exactly the saved ones (`isSameAsSavedSelection`) and whether every saved token is still picked (`isSupersetOfSavedSelection`). Both compare tokens, so swapping one app for another counts as a change even when the counts stay the same.
 
 ```tsx
 import {
@@ -210,8 +210,8 @@ import {
   restoresSavedSelection
   onSelectionCountsChange={({ nativeEvent }) => {
     console.log(
-      nativeEvent.matchesSavedSelection,
-      nativeEvent.keepsSavedSelection,
+      nativeEvent.isSameAsSavedSelection,
+      nativeEvent.isSupersetOfSavedSelection,
     )
   }}
 />
