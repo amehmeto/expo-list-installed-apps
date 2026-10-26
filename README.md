@@ -219,8 +219,6 @@ import {
 // On Cancel: await discardFamilyActivitySelectionDraft()
 ```
 
-> **Migrating from 0.x:** the picker no longer writes each change to the saved selection, and no longer clears `getResolvedApps()` on each change. Call `saveFamilyActivitySelectionDraft()` where the user confirms, or the saved selection and the resolved names never change.
-
 On Android (and iOS < 16) `FamilyActivityPicker` renders an empty `View` so the import is safe in cross-platform code. Branch on `getPlatformCapabilities().familyControlsAvailable` if you need to hide the UI entirely.
 
 #### Resolving picker tokens to app names (M4)
