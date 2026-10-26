@@ -100,10 +100,7 @@ export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
  * a fresh selection and the first non-empty result.
  */
 export async function getResolvedApps(): Promise<InstalledApp[]> {
-  if (typeof ExpoListInstalledAppsModule.getResolvedApps !== 'function') {
-    return []
-  }
-  const apps = await ExpoListInstalledAppsModule.getResolvedApps()
+  const apps = await callOptionalNative('getResolvedApps')
   if (!Array.isArray(apps)) {
     return []
   }
@@ -120,10 +117,7 @@ export async function getResolvedApps(): Promise<InstalledApp[]> {
  * Always `null` on Android and iOS < 16.
  */
 export async function getResolvedAppsError(): Promise<string | null> {
-  if (typeof ExpoListInstalledAppsModule.getResolvedAppsError !== 'function') {
-    return null
-  }
-  const result = await ExpoListInstalledAppsModule.getResolvedAppsError()
+  const result = await callOptionalNative('getResolvedAppsError')
   return typeof result === 'string' ? result : null
 }
 
@@ -134,13 +128,7 @@ export async function getResolvedAppsError(): Promise<string | null> {
  * iOS < 16.
  */
 export async function saveFamilyActivitySelectionDraft(): Promise<void> {
-  if (
-    typeof ExpoListInstalledAppsModule.saveFamilyActivitySelectionDraft !==
-    'function'
-  ) {
-    return
-  }
-  await ExpoListInstalledAppsModule.saveFamilyActivitySelectionDraft()
+  await callOptionalNative('saveFamilyActivitySelectionDraft')
 }
 
 /**
@@ -148,13 +136,15 @@ export async function saveFamilyActivitySelectionDraft(): Promise<void> {
  * saved one. Does nothing on Android and iOS < 16.
  */
 export async function discardFamilyActivitySelectionDraft(): Promise<void> {
-  if (
-    typeof ExpoListInstalledAppsModule.discardFamilyActivitySelectionDraft !==
-    'function'
-  ) {
-    return
-  }
-  await ExpoListInstalledAppsModule.discardFamilyActivitySelectionDraft()
+  await callOptionalNative('discardFamilyActivitySelectionDraft')
+}
+
+// Native functions that older builds, Android or iOS < 16 may not register.
+// Resolves `undefined` when the function is absent.
+async function callOptionalNative(name: string): Promise<unknown> {
+  const fn: unknown = ExpoListInstalledAppsModule[name]
+  if (typeof fn !== 'function') return undefined
+  return fn.call(ExpoListInstalledAppsModule)
 }
 
 function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {

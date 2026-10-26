@@ -84,6 +84,8 @@ public final class ExpoListInstalledAppsModule: Module {
       }
       #endif
     }
+    // The picker writes the draft on the main queue.
+    .runOnQueue(.main)
 
     AsyncFunction("discardFamilyActivitySelectionDraft") { () -> Void in
       #if canImport(FamilyControls)
@@ -92,6 +94,7 @@ public final class ExpoListInstalledAppsModule: Module {
       }
       #endif
     }
+    .runOnQueue(.main)
 
     Function("getFamilyControlsAuthorizationStatus") { () -> String in
       #if canImport(FamilyControls)

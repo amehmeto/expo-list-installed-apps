@@ -1,6 +1,7 @@
 import * as ExpoListInstalledApps from 'expo-list-installed-apps'
 import {
   AuthorizationStatus,
+  discardFamilyActivitySelectionDraft,
   getFamilyControlsAuthorizationStatus,
   getResolvedApps,
   getResolvedAppsError,
@@ -448,13 +449,17 @@ function PickerModal({
   const saveAndClose = () => {
     saveFamilyActivitySelectionDraft().finally(onClose)
   }
+  // Swipe-down and the Android back button cancel the edit.
+  const discardAndClose = () => {
+    discardFamilyActivitySelectionDraft().finally(onClose)
+  }
 
   return (
     <Modal
       visible={visible}
       animationType={reduceMotion ? 'fade' : 'slide'}
       presentationStyle="pageSheet"
-      onRequestClose={saveAndClose}
+      onRequestClose={discardAndClose}
     >
       <View
         style={[styles.pickerContainer, { backgroundColor: theme.background }]}

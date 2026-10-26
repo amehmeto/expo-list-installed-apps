@@ -30,6 +30,8 @@ export type FamilyActivityPickerProps = ViewProps & {
    * side. To act on the selection (block, restrict, or resolve names), the
    * upcoming M4 DeviceActivityReport extension is required.
    *
+   * Also fires once when the picker opens, with the opening state.
+   *
    * Each change goes to a draft. Call `saveFamilyActivitySelectionDraft()` to
    * make it the saved selection, or `discardFamilyActivitySelectionDraft()`
    * to drop it.

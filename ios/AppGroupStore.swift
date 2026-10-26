@@ -42,21 +42,44 @@ enum AppGroupSelectionStore {
     defaults.set(data, forKey: AppGroupStore.selectionDraftKey)
   }
 
+  // Call on the main queue, where the picker writes the draft, so a last
+  // edit cannot land between the copy and the removal of the draft.
   static func saveDraft() {
     guard let defaults = AppGroupStore.defaults,
-          let draft = defaults.data(forKey: AppGroupStore.selectionDraftKey) else {
+          let draftData = defaults.data(forKey: AppGroupStore.selectionDraftKey) else {
       return
     }
-    defaults.set(draft, forKey: AppGroupStore.selectionKey)
+    defaults.removeObject(forKey: AppGroupStore.selectionDraftKey)
+    if let draft = try? JSONDecoder().decode(FamilyActivitySelection.self, from: draftData),
+       let saved = loadSaved(),
+       draft.hasSameTokens(as: saved) {
+      // Same tokens: the resolved names are still right, keep them.
+      return
+    }
+    defaults.set(draftData, forKey: AppGroupStore.selectionKey)
     // Drop stale resolved data so getResolvedApps() doesn't return names from
     // the previous selection while the OS reschedules the report extension
     // for the new one.
     defaults.removeObject(forKey: AppGroupStore.resolvedAppsKey)
-    defaults.removeObject(forKey: AppGroupStore.selectionDraftKey)
   }
 
   static func discardDraft() {
     AppGroupStore.defaults?.removeObject(forKey: AppGroupStore.selectionDraftKey)
+  }
+}
+
+@available(iOS 16.0, *)
+extension FamilyActivitySelection {
+  func hasSameTokens(as other: FamilyActivitySelection) -> Bool {
+    applicationTokens == other.applicationTokens
+      && categoryTokens == other.categoryTokens
+      && webDomainTokens == other.webDomainTokens
+  }
+
+  func keepsTokens(of other: FamilyActivitySelection) -> Bool {
+    applicationTokens.isSuperset(of: other.applicationTokens)
+      && categoryTokens.isSuperset(of: other.categoryTokens)
+      && webDomainTokens.isSuperset(of: other.webDomainTokens)
   }
 }
 #endif
