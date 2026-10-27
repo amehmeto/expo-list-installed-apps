@@ -42,7 +42,7 @@ private struct FamilyActivityPickerInner: View {
   @State private var baseline: FamilyActivitySelection?
   @State private var hasUserChanged = false
   @State private var lastSentCounts: SelectionCounts?
-  @State private var draftOwner = UUID()
+  @StateObject private var draftOwner = DraftOwner()
 
   // TODO: when the iOS floor moves to 17:
   //   1. Use FamilyActivityPicker(headerText:selection:) and drop the manual
@@ -66,20 +66,16 @@ private struct FamilyActivityPickerInner: View {
         .onChange(of: props.restoresSavedSelection) { _ in
           seedSelection()
         }
-        // A picker closed without a save or a discard leaves no draft.
-        .onDisappear {
-          AppGroupSelectionStore.discardDraft(owner: draftOwner)
-        }
         // Compares tokens, not values: the seed write, or a selection Apple
         // writes back in another form, is not a user change.
         .onChange(of: selection) { newValue in
           guard let baseline else { return }
           if newValue.hasSameTokens(as: baseline) {
             // Back to the opening state: nothing to save.
-            AppGroupSelectionStore.discardDraft(owner: draftOwner)
+            AppGroupSelectionStore.discardDraft(owner: draftOwner.id)
           } else {
             hasUserChanged = true
-            AppGroupSelectionStore.persistDraft(newValue, owner: draftOwner)
+            AppGroupSelectionStore.persistDraft(newValue, owner: draftOwner.id)
           }
           sendCounts(of: newValue, against: baseline)
         }
@@ -92,7 +88,7 @@ private struct FamilyActivityPickerInner: View {
       ? AppGroupSelectionStore.loadSaved() ?? FamilyActivitySelection()
       : FamilyActivitySelection()
     baseline = seed
-    AppGroupSelectionStore.discardDraft(owner: draftOwner)
+    AppGroupSelectionStore.discardDraft(owner: draftOwner.id)
     if seed != selection {
       selection = seed
     }
@@ -130,5 +126,20 @@ private struct SelectionCounts: Equatable {
   let webDomainCount: Int
   let isSameAsSavedSelection: Bool
   let isSupersetOfSavedSelection: Bool
+}
+
+// Drops the draft of its picker when SwiftUI destroys the picker. Not on
+// onDisappear: a picker in a hidden tab or a covered screen still holds the
+// edit the app saves later.
+@available(iOS 16.0, *)
+private final class DraftOwner: ObservableObject {
+  let id = UUID()
+
+  deinit {
+    let id = id
+    DispatchQueue.main.async {
+      AppGroupSelectionStore.discardDraft(owner: id)
+    }
+  }
 }
 #endif

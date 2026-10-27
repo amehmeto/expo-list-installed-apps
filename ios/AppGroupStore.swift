@@ -26,8 +26,9 @@ enum AppGroupStore {
 //
 // The draft lives in memory, not in the App Group: the report extension
 // never reads it, and a draft from a killed app must not come back. Each
-// picker owns the draft it writes, and drops only its own draft when it
-// closes, so a second picker cannot delete the edit of the first. One draft
+// picker owns the draft it writes, and drops only its own draft when SwiftUI
+// destroys it, so a second picker cannot delete the edit of the first, and a
+// picker in a hidden tab keeps its edit. One draft
 // at a time: the last picker that changes it owns it.
 //
 // Main queue only: the picker runs there, and the module functions run
