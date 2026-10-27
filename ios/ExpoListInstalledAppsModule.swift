@@ -77,6 +77,25 @@ public final class ExpoListInstalledAppsModule: Module {
       AppGroupStore.defaults?.string(forKey: AppGroupStore.resolvedAppsErrorKey)
     }
 
+    AsyncFunction("saveFamilyActivitySelectionDraft") { () -> Void in
+      #if canImport(FamilyControls)
+      if #available(iOS 16.0, *) {
+        AppGroupSelectionStore.saveDraft()
+      }
+      #endif
+    }
+    // The picker writes the draft on the main queue.
+    .runOnQueue(.main)
+
+    AsyncFunction("discardFamilyActivitySelectionDraft") { () -> Void in
+      #if canImport(FamilyControls)
+      if #available(iOS 16.0, *) {
+        AppGroupSelectionStore.discardDraft()
+      }
+      #endif
+    }
+    .runOnQueue(.main)
+
     Function("getFamilyControlsAuthorizationStatus") { () -> String in
       #if canImport(FamilyControls)
       if #available(iOS 16.0, *) {

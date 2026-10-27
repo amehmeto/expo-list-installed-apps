@@ -8,12 +8,14 @@ import {
   DEFAULT_IOS_APP_CATALOG,
   DEFAULT_IOS_APP_SCHEMES,
   canOpenApp,
+  discardFamilyActivitySelectionDraft,
   getFamilyControlsAuthorizationStatus,
   getPlatformCapabilities,
   getResolvedApps,
   getResolvedAppsError,
   listInstalledApps,
   requestFamilyControlsAuthorization,
+  saveFamilyActivitySelectionDraft,
 } from './index'
 
 // Mock the native module
@@ -25,6 +27,8 @@ jest.mock('./ExpoListInstalledAppsModule', () => ({
   getFamilyControlsAuthorizationStatus: jest.fn(),
   getResolvedApps: jest.fn(),
   getResolvedAppsError: jest.fn(),
+  saveFamilyActivitySelectionDraft: jest.fn(),
+  discardFamilyActivitySelectionDraft: jest.fn(),
 }))
 
 describe('listInstalledApps', () => {
@@ -537,5 +541,33 @@ describe('getResolvedAppsError', () => {
     ;(
       ExpoListInstalledAppsModule as unknown as Record<string, unknown>
     ).getResolvedAppsError = original
+  })
+})
+
+describe.each([
+  [
+    'saveFamilyActivitySelectionDraft',
+    saveFamilyActivitySelectionDraft,
+  ] as const,
+  [
+    'discardFamilyActivitySelectionDraft',
+    discardFamilyActivitySelectionDraft,
+  ] as const,
+])('%s', (functionName, callWrapper) => {
+  beforeEach(() => {
+    ExpoListInstalledAppsModule[functionName] = jest.fn()
+  })
+
+  it('calls the native function once', async () => {
+    ExpoListInstalledAppsModule[functionName].mockResolvedValue(undefined)
+    await callWrapper()
+    expect(ExpoListInstalledAppsModule[functionName]).toHaveBeenCalledTimes(1)
+  })
+
+  it('resolves when the native module does not implement the function', async () => {
+    ;(ExpoListInstalledAppsModule as unknown as Record<string, unknown>)[
+      functionName
+    ] = undefined
+    await expect(callWrapper()).resolves.toBeUndefined()
   })
 })

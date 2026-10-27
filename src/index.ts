@@ -100,10 +100,7 @@ export async function getPlatformCapabilities(): Promise<PlatformCapabilities> {
  * a fresh selection and the first non-empty result.
  */
 export async function getResolvedApps(): Promise<InstalledApp[]> {
-  if (typeof ExpoListInstalledAppsModule.getResolvedApps !== 'function') {
-    return []
-  }
-  const apps = await ExpoListInstalledAppsModule.getResolvedApps()
+  const apps = await callOptionalNative('getResolvedApps')
   if (!Array.isArray(apps)) {
     return []
   }
@@ -120,11 +117,42 @@ export async function getResolvedApps(): Promise<InstalledApp[]> {
  * Always `null` on Android and iOS < 16.
  */
 export async function getResolvedAppsError(): Promise<string | null> {
-  if (typeof ExpoListInstalledAppsModule.getResolvedAppsError !== 'function') {
-    return null
-  }
-  const result = await ExpoListInstalledAppsModule.getResolvedAppsError()
+  const result = await callOptionalNative('getResolvedAppsError')
   return typeof result === 'string' ? result : null
+}
+
+/**
+ * Makes the selection being edited in `FamilyActivityPicker` the saved one,
+ * then drops the draft and the names `getResolvedApps()` resolved for the
+ * previous selection. Does nothing when no draft exists, and on Android and
+ * iOS < 16.
+ */
+export async function saveFamilyActivitySelectionDraft(): Promise<void> {
+  await callOptionalNative('saveFamilyActivitySelectionDraft')
+}
+
+/**
+ * Drops the selection being edited in `FamilyActivityPicker` and keeps the
+ * saved one. Does nothing on Android and iOS < 16.
+ */
+export async function discardFamilyActivitySelectionDraft(): Promise<void> {
+  await callOptionalNative('discardFamilyActivitySelectionDraft')
+}
+
+// Native functions that older builds, Android or iOS < 16 may not register.
+type OptionalNativeFunction =
+  | 'getResolvedApps'
+  | 'getResolvedAppsError'
+  | 'saveFamilyActivitySelectionDraft'
+  | 'discardFamilyActivitySelectionDraft'
+
+// Resolves `undefined` when the function is absent.
+async function callOptionalNative(
+  name: OptionalNativeFunction,
+): Promise<unknown> {
+  const fn: unknown = ExpoListInstalledAppsModule[name]
+  if (typeof fn !== 'function') return undefined
+  return fn.call(ExpoListInstalledAppsModule)
 }
 
 function isAuthorizationStatus(value: unknown): value is AuthorizationStatus {

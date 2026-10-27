@@ -7,6 +7,7 @@ import FamilyControls
 
 public final class FamilyActivityPickerProps: ExpoSwiftUI.ViewProps {
   @Field public var headerTitle: String = ""
+  @Field public var restoresSavedSelection: Bool = false
   public var onSelectionCountsChange = EventDispatcher()
 }
 
@@ -37,6 +38,11 @@ public struct FamilyActivityPicker: ExpoSwiftUI.View, ExpoSwiftUI.WithHostingVie
 private struct FamilyActivityPickerInner: View {
   @ObservedObject var props: FamilyActivityPickerProps
   @State private var selection = FamilyActivitySelection()
+  // The selection the picker opened on. Nil until the first seed.
+  @State private var baseline: FamilyActivitySelection?
+  @State private var hasUserChanged = false
+  @State private var lastSentCounts: SelectionCounts?
+  @State private var draftOwner = UUID()
 
   // TODO: when the iOS floor moves to 17:
   //   1. Use FamilyActivityPicker(headerText:selection:) and drop the manual
@@ -51,21 +57,78 @@ private struct FamilyActivityPickerInner: View {
           .padding()
       }
       FamilyControls.FamilyActivityPicker(selection: $selection)
+        .onAppear {
+          // Wait one main-queue turn, so a prop set in the same update as
+          // the mount is there before the first seed and its event.
+          DispatchQueue.main.async(execute: seedSelection)
+        }
+        // The prop can still arrive later than that.
+        .onChange(of: props.restoresSavedSelection) { _ in
+          seedSelection()
+        }
+        // A picker closed without a save or a discard leaves no draft.
+        .onDisappear {
+          AppGroupSelectionStore.discardDraft(owner: draftOwner)
+        }
+        // Compares tokens, not values: the seed write, or a selection Apple
+        // writes back in another form, is not a user change.
         .onChange(of: selection) { newValue in
-          props.onSelectionCountsChange([
-            "applicationCount": newValue.applicationTokens.count,
-            "categoryCount": newValue.categoryTokens.count,
-            "webDomainCount": newValue.webDomainTokens.count,
-          ])
-          // Drop stale resolved data so getResolvedApps() doesn't return
-          // names from the previous selection while the OS reschedules the
-          // report extension for the new one.
-          if let defaults = AppGroupStore.defaults {
-            defaults.removeObject(forKey: AppGroupStore.resolvedAppsKey)
-            AppGroupSelectionStore.persist(newValue)
+          guard let baseline else { return }
+          if newValue.hasSameTokens(as: baseline) {
+            // Back to the opening state: nothing to save.
+            AppGroupSelectionStore.discardDraft(owner: draftOwner)
+          } else {
+            hasUserChanged = true
+            AppGroupSelectionStore.persistDraft(newValue, owner: draftOwner)
           }
+          sendCounts(of: newValue, against: baseline)
         }
     }
   }
+
+  private func seedSelection() {
+    guard !hasUserChanged else { return }
+    let seed = props.restoresSavedSelection
+      ? AppGroupSelectionStore.loadSaved() ?? FamilyActivitySelection()
+      : FamilyActivitySelection()
+    baseline = seed
+    AppGroupSelectionStore.discardDraft(owner: draftOwner)
+    if seed != selection {
+      selection = seed
+    }
+    // The app gets the opening state before the first tap. The onChange that
+    // the seed write fires sends the same counts, which sendCounts drops.
+    sendCounts(of: seed, against: seed)
+  }
+
+  private func sendCounts(
+    of value: FamilyActivitySelection,
+    against baseline: FamilyActivitySelection
+  ) {
+    let counts = SelectionCounts(
+      applicationCount: value.applicationTokens.count,
+      categoryCount: value.categoryTokens.count,
+      webDomainCount: value.webDomainTokens.count,
+      isSameAsSavedSelection: value.hasSameTokens(as: baseline),
+      isSupersetOfSavedSelection: value.keepsTokens(of: baseline)
+    )
+    guard counts != lastSentCounts else { return }
+    lastSentCounts = counts
+    props.onSelectionCountsChange([
+      "applicationCount": counts.applicationCount,
+      "categoryCount": counts.categoryCount,
+      "webDomainCount": counts.webDomainCount,
+      "isSameAsSavedSelection": counts.isSameAsSavedSelection,
+      "isSupersetOfSavedSelection": counts.isSupersetOfSavedSelection,
+    ])
+  }
+}
+
+private struct SelectionCounts: Equatable {
+  let applicationCount: Int
+  let categoryCount: Int
+  let webDomainCount: Int
+  let isSameAsSavedSelection: Bool
+  let isSupersetOfSavedSelection: Bool
 }
 #endif
