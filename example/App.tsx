@@ -17,7 +17,7 @@ import {
   FamilyActivityPicker,
   FamilyActivitySelectionCounts,
 } from 'expo-list-installed-apps/picker'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -438,20 +438,40 @@ function DetectionPanel() {
 function PickerModal({
   visible,
   onClose,
-  onSelectionChange,
+  onSave,
+  onError,
 }: {
   visible: boolean
   onClose: () => void
-  onSelectionChange: (counts: FamilyActivitySelectionCounts) => void
+  onSave: (counts: FamilyActivitySelectionCounts) => void
+  onError: (message: string) => void
 }) {
   const theme = useTheme()
   const reduceMotion = useReducedMotion()
-  const saveAndClose = () => {
-    saveFamilyActivitySelectionDraft().finally(onClose)
+  // The counts of the edit, given to the parent only when it is saved.
+  const draftCounts = useRef<FamilyActivitySelectionCounts | null>(null)
+
+  const saveAndClose = async () => {
+    try {
+      await saveFamilyActivitySelectionDraft()
+      if (draftCounts.current) onSave(draftCounts.current)
+    } catch (caught) {
+      onError(`Could not save the selection: ${describeError(caught)}`)
+    } finally {
+      draftCounts.current = null
+      onClose()
+    }
   }
   // Swipe-down and the Android back button cancel the edit.
-  const discardAndClose = () => {
-    discardFamilyActivitySelectionDraft().finally(onClose)
+  const discardAndClose = async () => {
+    try {
+      await discardFamilyActivitySelectionDraft()
+    } catch (caught) {
+      onError(`Could not discard the edit: ${describeError(caught)}`)
+    } finally {
+      draftCounts.current = null
+      onClose()
+    }
   }
 
   return (
@@ -479,9 +499,9 @@ function PickerModal({
           style={styles.pickerBody}
           headerTitle="Pick apps to manage"
           restoresSavedSelection
-          onSelectionCountsChange={({ nativeEvent }) =>
-            onSelectionChange(nativeEvent)
-          }
+          onSelectionCountsChange={({ nativeEvent }) => {
+            draftCounts.current = nativeEvent
+          }}
         />
       </View>
     </Modal>
@@ -498,6 +518,7 @@ function FamilyControlsPanel() {
   const [authError, setAuthError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<boolean | null>(null)
   const [pickerVisible, setPickerVisible] = useState(false)
+  const [pickerError, setPickerError] = useState<string | null>(null)
   const [selection, setSelection] =
     useState<FamilyActivitySelectionCounts | null>(null)
   const [resolved, setResolved] = useState<InstalledApp[] | null>(null)
@@ -580,6 +601,7 @@ function FamilyControlsPanel() {
       ))}
 
       {authError && <ErrorNotice message={authError} onRetry={requestAuth} />}
+      {pickerError && <ErrorNotice message={pickerError} />}
       {resolveError && (
         <ErrorNotice message={resolveError} onRetry={refreshResolved} />
       )}
@@ -599,7 +621,10 @@ function FamilyControlsPanel() {
             fill
             label="Show picker"
             variant="primary"
-            onPress={() => setPickerVisible(true)}
+            onPress={() => {
+              setPickerError(null)
+              setPickerVisible(true)
+            }}
           />
           <ActionButton
             fill
@@ -613,7 +638,8 @@ function FamilyControlsPanel() {
       <PickerModal
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
-        onSelectionChange={setSelection}
+        onSave={setSelection}
+        onError={setPickerError}
       />
     </Panel>
   )

@@ -140,8 +140,16 @@ export async function discardFamilyActivitySelectionDraft(): Promise<void> {
 }
 
 // Native functions that older builds, Android or iOS < 16 may not register.
+type OptionalNativeFunction =
+  | 'getResolvedApps'
+  | 'getResolvedAppsError'
+  | 'saveFamilyActivitySelectionDraft'
+  | 'discardFamilyActivitySelectionDraft'
+
 // Resolves `undefined` when the function is absent.
-async function callOptionalNative(name: string): Promise<unknown> {
+async function callOptionalNative(
+  name: OptionalNativeFunction,
+): Promise<unknown> {
   const fn: unknown = ExpoListInstalledAppsModule[name]
   if (typeof fn !== 'function') return undefined
   return fn.call(ExpoListInstalledAppsModule)

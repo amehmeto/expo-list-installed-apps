@@ -7,7 +7,6 @@ import FamilyControls
 enum AppGroupStore {
   static let infoPlistKey = "EXListInstalledAppsAppGroup"
   static let selectionKey = "pickerSelection"
-  static let selectionDraftKey = "pickerSelectionDraft"
   static let resolvedAppsKey = "resolvedApps"
   static let resolvedAppsErrorKey = "resolvedAppsError"
 
@@ -24,8 +23,19 @@ enum AppGroupStore {
 #if canImport(FamilyControls)
 // The picker edits a draft. The saved selection only changes when the app
 // saves that draft, so an edit the user discards never reaches it.
+//
+// The draft lives in memory, not in the App Group: the report extension
+// never reads it, and a draft from a killed app must not come back. Each
+// picker owns the draft it writes, and drops only its own draft when it
+// closes, so a second picker cannot delete the edit of the first. One draft
+// at a time: the last picker that changes it owns it.
+//
+// Main queue only: the picker runs there, and the module functions run
+// there through runOnQueue(.main).
 @available(iOS 16.0, *)
 enum AppGroupSelectionStore {
+  private static var draft: (owner: UUID, selection: FamilyActivitySelection)?
+
   static func loadSaved() -> FamilyActivitySelection? {
     guard let data = AppGroupStore.defaults?.data(forKey: AppGroupStore.selectionKey) else {
       return nil
@@ -33,38 +43,38 @@ enum AppGroupSelectionStore {
     return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
   }
 
-  static func persistDraft(_ selection: FamilyActivitySelection) {
-    // Short-circuit before encoding when no App Group is configured —
-    // consumers can enable familyControls without appGroups, in which case
-    // there's nowhere to write and JSON encoding the selection is wasted work.
-    guard let defaults = AppGroupStore.defaults else { return }
-    guard let data = try? JSONEncoder().encode(selection) else { return }
-    defaults.set(data, forKey: AppGroupStore.selectionDraftKey)
+  static func persistDraft(_ selection: FamilyActivitySelection, owner: UUID) {
+    draft = (owner, selection)
   }
 
-  // Call on the main queue, where the picker writes the draft, so a last
-  // edit cannot land between the copy and the removal of the draft.
+  static func discardDraft(owner: UUID) {
+    guard draft?.owner == owner else { return }
+    draft = nil
+  }
+
+  static func discardDraft() {
+    draft = nil
+  }
+
   static func saveDraft() {
-    guard let defaults = AppGroupStore.defaults,
-          let draftData = defaults.data(forKey: AppGroupStore.selectionDraftKey) else {
-      return
-    }
-    defaults.removeObject(forKey: AppGroupStore.selectionDraftKey)
-    if let draft = try? JSONDecoder().decode(FamilyActivitySelection.self, from: draftData),
-       let saved = loadSaved(),
-       draft.hasSameTokens(as: saved) {
+    guard let selection = draft?.selection else { return }
+    draft = nil
+    if let saved = loadSaved(), selection.hasSameTokens(as: saved) {
       // Same tokens: the resolved names are still right, keep them.
       return
     }
-    defaults.set(draftData, forKey: AppGroupStore.selectionKey)
+    // Short-circuit before encoding when no App Group is configured —
+    // consumers can enable familyControls without appGroups, in which case
+    // there's nowhere to write and JSON encoding the selection is wasted work.
+    guard let defaults = AppGroupStore.defaults,
+          let data = try? JSONEncoder().encode(selection) else {
+      return
+    }
+    defaults.set(data, forKey: AppGroupStore.selectionKey)
     // Drop stale resolved data so getResolvedApps() doesn't return names from
     // the previous selection while the OS reschedules the report extension
     // for the new one.
     defaults.removeObject(forKey: AppGroupStore.resolvedAppsKey)
-  }
-
-  static func discardDraft() {
-    AppGroupStore.defaults?.removeObject(forKey: AppGroupStore.selectionDraftKey)
   }
 }
 
