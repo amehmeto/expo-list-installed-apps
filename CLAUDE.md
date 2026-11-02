@@ -10,16 +10,16 @@ Expo native module (`@amehmeto/expo-list-installed-apps`) that lists installed a
 
 ```bash
 # Build TypeScript
-npm run build
+bun run build
 
 # Lint
-npm run lint
+bun run lint
 
 # Run TypeScript tests (Jest)
-npm test
+bun run test
 
 # Run a single test file
-npx jest src/index.test.ts
+bunx jest src/index.test.ts
 
 # Run Kotlin unit tests (from repo root, requires Android SDK)
 cd example/android && ./gradlew :amehmeto-expo-list-installed-apps:testDebugUnitTest
@@ -31,12 +31,12 @@ cd example/android && ./gradlew :amehmeto-expo-list-installed-apps:detekt
 tsc --noEmit
 
 # Example app setup (Android)
-cd example && npm ci && npx expo prebuild --platform android --no-install
+cd example && bun install --frozen-lockfile && bunx expo prebuild --platform android --no-install
 
 # Example app setup (iOS, requires macOS + Xcode + CocoaPods)
-cd example && npm ci && npx expo prebuild --platform ios --no-install
+cd example && bun install --frozen-lockfile && bunx expo prebuild --platform ios --no-install
 cd example/ios && pod install
-cd .. && npx expo run:ios
+cd .. && bunx expo run:ios
 ```
 
 ## Architecture

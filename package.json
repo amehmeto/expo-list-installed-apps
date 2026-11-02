@@ -33,7 +33,7 @@
   "homepage": "https://github.com/amehmeto/expo-list-installed-apps#readme",
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
-      "npm run lint -- --fix"
+      "bun run lint --fix"
     ],
     "*.{json,md}": [
       "prettier --write"
@@ -66,5 +66,6 @@
     "expo": ">=55.0.0",
     "react": "*",
     "react-native": "*"
-  }
+  },
+  "packageManager": "bun@1.4.4"
 }
