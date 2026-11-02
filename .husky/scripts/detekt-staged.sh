@@ -9,7 +9,7 @@ set -eu
 if [ ! -f "example/android/gradlew" ] ||
   [ ! -d "example/node_modules/expo-modules-autolinking/android/expo-gradle-plugin" ]; then
   printf "⚠️  Android project not generated, skipping detekt.\n"
-  printf "   To enable it: cd example && npm ci && npx expo prebuild --platform android --no-install\n"
+  printf "   To enable it: cd example && bun install --frozen-lockfile && bunx expo prebuild --platform android --no-install\n"
   exit 0
 fi
 

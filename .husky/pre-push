@@ -5,7 +5,7 @@ sh .husky/scripts/no-direct-push-main-master.sh
 sh .husky/scripts/check-conflicts-with-main.sh
 
 # Run TypeScript unit tests
-npm test
+bun run test
 
 # Run Kotlin unit tests and detekt
 if [ -d "example/android" ] && [ -f "example/android/gradlew" ] && [ -d "example/node_modules/expo-modules-autolinking/android/expo-gradle-plugin" ]; then

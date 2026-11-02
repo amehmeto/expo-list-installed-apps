@@ -5,7 +5,7 @@ A React Native module to list installed applications on the device. Android has 
 ## Installation
 
 ```sh
-npm install expo-list-installed-apps
+bun install expo-list-installed-apps
 # or
 yarn add expo-list-installed-apps
 ```
@@ -117,8 +117,8 @@ Opt in via the config plugin — schemes get merged into `LSApplicationQueriesSc
 ```jsonc
 {
   "expo": {
-    "plugins": [["expo-list-installed-apps", { "useDefaultCatalog": true }]]
-  }
+    "plugins": [["expo-list-installed-apps", { "useDefaultCatalog": true }]],
+  },
 }
 ```
 
@@ -237,13 +237,13 @@ Opt in by adding an App Group and `deviceActivityReport: true` to the plugin opt
           "ios": {
             "familyControls": true,
             "appGroups": ["group.your.bundle.id"],
-            "deviceActivityReport": true
-          }
-        }
+            "deviceActivityReport": true,
+          },
+        },
       ],
-      ["expo-build-properties", { "ios": { "deploymentTarget": "16.0" } }]
-    ]
-  }
+      ["expo-build-properties", { "ios": { "deploymentTarget": "16.0" } }],
+    ],
+  },
 }
 ```
 
