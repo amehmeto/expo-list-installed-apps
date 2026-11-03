@@ -83,7 +83,7 @@ cd .. && bunx expo run:ios
 - Prettier: single quotes, trailing commas, no semicolons
 - TypeScript tests use `jest.mock()` for native module injection
 - Kotlin tests use JUnit 4 + Mockito
-- Husky pre-commit runs lint-staged; pre-push blocks direct main push and runs full test suite + detekt
+- Husky pre-commit runs betterleaks first (blocks secrets in the staged diff; install with `brew install betterleaks`), then lint-staged; pre-push blocks direct main push and runs full test suite + detekt
 
 ## CI/CD
 
